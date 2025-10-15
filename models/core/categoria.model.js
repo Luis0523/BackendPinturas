@@ -1,6 +1,6 @@
 // models/categoria.model.js
 const { DataTypes } = require('sequelize');
-const db = require('../db/db');
+const db = require('../../db/db');
 
 const Categoria = db.define('Categoria', {
     id: {

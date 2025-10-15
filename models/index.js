@@ -1,12 +1,21 @@
 // models/index.js
 const db = require('../db/db');
 
-// Importar todos los modelos
-const Producto = require('./producto.model');
-const Categoria = require('./categoria.model');
-const Marca = require('./marca.model');
+// ===== IMPORTAR MODELOS CORE =====
+const Categoria = require('./core/categoria.model');
+const Marca = require('./core/marca.model');
+const Presentacion = require('./core/presentacion.model');
+const Rol = require('./core/rol.model');
+const Sucursal = require('./core/sucursal.model');
+
+// ===== IMPORTAR MODELOS PRODUCTOS =====
+const Producto = require('./productos/producto.model');
+
+// ===== IMPORTAR MODELOS USUARIOS =====
+const Cliente = require('./usuarios/cliente.model'); // ← Agregar
 
 // ===== DEFINIR RELACIONES =====
+
 // Categoria -> Producto
 Categoria.hasMany(Producto, { 
     foreignKey: 'categoria_id',
@@ -31,8 +40,16 @@ Producto.belongsTo(Marca, {
 
 // ===== EXPORTAR =====
 module.exports = {
-    Producto,
+    // Core
     Categoria,
     Marca,
+    Presentacion,
+    Rol,
+    Sucursal,
+    // Productos
+    Producto,
+    // Usuarios
+    Cliente, // ← Agregar
+    // Sequelize
     sequelize: db
 };

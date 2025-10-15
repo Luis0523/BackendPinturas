@@ -3,13 +3,21 @@ require('dotenv').config();
 const { sequelize } = require('./models/index');  // Las relaciones ya se ejecutan automáticamente
 
 const productoRoutes = require('./routes/producto.routes');
+const presentacionRoutes = require('./routes/presentacion.route');
+const rolesRoutes = require('./routes/rol.route');
+const sucursalRoutes = require('./routes/sucursal.route');
+//const sucursalRoutes = require('./routes/sucursal.route');
 
+const rutasindex = require('./routes/index');
 const app = express();
 
 app.use(express.json());
 
 // Rutas
-app.use('/api', productoRoutes);
+app.use('', rutasindex);
+//app.use('/api', presentacionRoutes);
+//app.use('/api', rolesRoutes);
+//app.use('/api', sucursalRoutes);
 
 // Sincronización de la base de datos
 sequelize.sync({ alter: false })

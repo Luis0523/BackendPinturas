@@ -1,6 +1,6 @@
 // models/marca.model.js
 const { DataTypes } = require('sequelize');
-const db = require('../db/db');
+const db = require('../../db/db');
 
 const Marca = db.define('Marca', {
     id: {
