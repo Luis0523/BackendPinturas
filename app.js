@@ -2,10 +2,7 @@ const express = require('express');
 require('dotenv').config();
 const { sequelize } = require('./models/index');  // Las relaciones ya se ejecutan automáticamente
 
-const productoRoutes = require('./routes/producto.routes');
-const presentacionRoutes = require('./routes/presentacion.route');
-const rolesRoutes = require('./routes/rol.route');
-const sucursalRoutes = require('./routes/sucursal.route');
+
 //const sucursalRoutes = require('./routes/sucursal.route');
 
 const rutasindex = require('./routes/index');

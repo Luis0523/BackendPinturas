@@ -10,9 +10,14 @@ const Sucursal = require('./core/sucursal.model');
 
 // ===== IMPORTAR MODELOS PRODUCTOS =====
 const Producto = require('./productos/producto.model');
+const ProductoPresentacion = require('./productos/productoPresentacion.model');
+
+// ===== IMPORTAR MODELOS INVENTARIO =====
+const Precio = require('./inventario/precio.model'); // ← NUEVO
 
 // ===== IMPORTAR MODELOS USUARIOS =====
-const Cliente = require('./usuarios/cliente.model'); // ← Agregar
+const Usuario = require('./usuarios/usuario.model');
+const Cliente = require('./usuarios/cliente.model');
 
 // ===== DEFINIR RELACIONES =====
 
@@ -38,6 +43,74 @@ Producto.belongsTo(Marca, {
     as: 'marca'
 });
 
+// Rol -> Usuario
+Rol.hasMany(Usuario, {
+    foreignKey: 'rol_id',
+    as: 'usuarios'
+});
+
+Usuario.belongsTo(Rol, {
+    foreignKey: 'rol_id',
+    as: 'rol'
+});
+
+// Sucursal -> Usuario
+Sucursal.hasMany(Usuario, {
+    foreignKey: 'sucursal_id',
+    as: 'usuarios'
+});
+
+Usuario.belongsTo(Sucursal, {
+    foreignKey: 'sucursal_id',
+    as: 'sucursal'
+});
+
+// Producto -> ProductoPresentacion
+Producto.hasMany(ProductoPresentacion, {
+    foreignKey: 'producto_id',
+    as: 'presentaciones'
+});
+
+ProductoPresentacion.belongsTo(Producto, {
+    foreignKey: 'producto_id',
+    as: 'producto'
+});
+
+// Presentacion -> ProductoPresentacion
+Presentacion.hasMany(ProductoPresentacion, {
+    foreignKey: 'presentacion_id',
+    as: 'productos'
+});
+
+ProductoPresentacion.belongsTo(Presentacion, {
+    foreignKey: 'presentacion_id',
+    as: 'presentacion'
+});
+
+// ===== RELACIONES PRECIOS (NUEVAS) =====
+
+// ProductoPresentacion -> Precio
+ProductoPresentacion.hasMany(Precio, {
+    foreignKey: 'producto_presentacion_id',
+    as: 'precios'
+});
+
+Precio.belongsTo(ProductoPresentacion, {
+    foreignKey: 'producto_presentacion_id',
+    as: 'productoPresentacion'
+});
+
+// Sucursal -> Precio
+Sucursal.hasMany(Precio, {
+    foreignKey: 'sucursal_id',
+    as: 'precios'
+});
+
+Precio.belongsTo(Sucursal, {
+    foreignKey: 'sucursal_id',
+    as: 'sucursal'
+});
+
 // ===== EXPORTAR =====
 module.exports = {
     // Core
@@ -48,8 +121,12 @@ module.exports = {
     Sucursal,
     // Productos
     Producto,
+    ProductoPresentacion,
+    // Inventario
+    Precio, // ← NUEVO
     // Usuarios
-    Cliente, // ← Agregar
+    Usuario,
+    Cliente,
     // Sequelize
     sequelize: db
 };
