@@ -15,13 +15,18 @@ const ProductoPresentacion = require('./productos/productoPresentacion.model');
 // ===== IMPORTAR MODELOS INVENTARIO =====
 const Precio = require('./inventario/precio.model');
 const InventarioSucursal = require('./inventario/inventarioSucursal.model');
-const MovimientoInventario = require('./inventario/movimientoInventario.model'); // ← NUEVO
+const MovimientoInventario = require('./inventario/movimientoInventario.model');
 
 // ===== IMPORTAR MODELOS USUARIOS =====
 const Usuario = require('./usuarios/usuario.model');
 const Cliente = require('./usuarios/cliente.model');
 
-// ===== DEFINIR RELACIONES =====
+// ===== IMPORTAR MODELOS VENTAS (NUEVOS) =====
+const Factura = require('./ventas/factura.model');
+const DetalleFactura = require('./ventas/detalleFactura.model');
+const Pago = require('./ventas/pago.model');
+
+// ===== DEFINIR RELACIONES EXISTENTES =====
 
 // Categoria -> Producto
 Categoria.hasMany(Producto, { 
@@ -89,8 +94,6 @@ ProductoPresentacion.belongsTo(Presentacion, {
     as: 'presentacion'
 });
 
-// ===== RELACIONES PRECIOS =====
-
 // ProductoPresentacion -> Precio
 ProductoPresentacion.hasMany(Precio, {
     foreignKey: 'producto_presentacion_id',
@@ -112,8 +115,6 @@ Precio.belongsTo(Sucursal, {
     foreignKey: 'sucursal_id',
     as: 'sucursal'
 });
-
-// ===== RELACIONES INVENTARIO =====
 
 // Sucursal -> InventarioSucursal
 Sucursal.hasMany(InventarioSucursal, {
@@ -137,8 +138,6 @@ InventarioSucursal.belongsTo(ProductoPresentacion, {
     as: 'productoPresentacion'
 });
 
-// ===== RELACIONES MOVIMIENTOS INVENTARIO (NUEVAS) =====
-
 // Sucursal -> MovimientoInventario
 Sucursal.hasMany(MovimientoInventario, {
     foreignKey: 'sucursal_id',
@@ -161,6 +160,85 @@ MovimientoInventario.belongsTo(ProductoPresentacion, {
     as: 'productoPresentacion'
 });
 
+// ===== RELACIONES FACTURAS (NUEVAS) =====
+
+// Cliente -> Factura
+Cliente.hasMany(Factura, {
+    foreignKey: 'cliente_id',
+    as: 'facturas'
+});
+
+Factura.belongsTo(Cliente, {
+    foreignKey: 'cliente_id',
+    as: 'cliente'
+});
+
+// Usuario -> Factura (vendedor)
+Usuario.hasMany(Factura, {
+    foreignKey: 'usuario_id',
+    as: 'facturas'
+});
+
+Factura.belongsTo(Usuario, {
+    foreignKey: 'usuario_id',
+    as: 'usuario'
+});
+
+// Usuario -> Factura (quien anuló)
+Usuario.hasMany(Factura, {
+    foreignKey: 'anulada_por',
+    as: 'facturas_anuladas'
+});
+
+Factura.belongsTo(Usuario, {
+    foreignKey: 'anulada_por',
+    as: 'anulador'
+});
+
+// Sucursal -> Factura
+Sucursal.hasMany(Factura, {
+    foreignKey: 'sucursal_id',
+    as: 'facturas'
+});
+
+Factura.belongsTo(Sucursal, {
+    foreignKey: 'sucursal_id',
+    as: 'sucursal'
+});
+
+// Factura -> DetalleFactura
+Factura.hasMany(DetalleFactura, {
+    foreignKey: 'factura_id',
+    as: 'detalles'
+});
+
+DetalleFactura.belongsTo(Factura, {
+    foreignKey: 'factura_id',
+    as: 'factura'
+});
+
+// ProductoPresentacion -> DetalleFactura
+ProductoPresentacion.hasMany(DetalleFactura, {
+    foreignKey: 'producto_presentacion_id',
+    as: 'detalles_factura'
+});
+
+DetalleFactura.belongsTo(ProductoPresentacion, {
+    foreignKey: 'producto_presentacion_id',
+    as: 'productoPresentacion'
+});
+
+// Factura -> Pago
+Factura.hasMany(Pago, {
+    foreignKey: 'factura_id',
+    as: 'pagos'
+});
+
+Pago.belongsTo(Factura, {
+    foreignKey: 'factura_id',
+    as: 'factura'
+});
+
 // ===== EXPORTAR =====
 module.exports = {
     // Core
@@ -175,10 +253,14 @@ module.exports = {
     // Inventario
     Precio,
     InventarioSucursal,
-    MovimientoInventario, // ← NUEVO
+    MovimientoInventario,
     // Usuarios
     Usuario,
     Cliente,
+    // Ventas (NUEVOS)
+    Factura,
+    DetalleFactura,
+    Pago,
     // Sequelize
     sequelize: db
 };
