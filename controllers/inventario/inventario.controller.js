@@ -1,6 +1,7 @@
 // controllers/inventario/inventario.controller.js
-const { InventarioSucursal, ProductoPresentacion, Producto, Presentacion, Sucursal, Categoria, Marca } = require('../../models/index');
+const { InventarioSucursal, ProductoPresentacion, Producto, Presentacion, Sucursal, Categoria, Marca, MovimientoInventario } = require('../../models/index');
 const { Op } = require('sequelize');
+const db = require('../../db/db');
 
 // Obtener inventario completo de una sucursal
 const getInventarioSucursal = async (req, res, next) => {
@@ -334,12 +335,16 @@ const upsertInventario = async (req, res, next) => {
 };
 
 // Ajustar inventario (sumar o restar)
+// ===== REEMPLAZAR ajustarInventario =====
 const ajustarInventario = async (req, res, next) => {
+    const transaction = await db.transaction(); // Usar transacción
+    
     try {
         const { sucursal_id, producto_presentacion_id, cantidad, motivo } = req.body;
 
         // Validaciones
         if (!sucursal_id || !producto_presentacion_id || cantidad === undefined) {
+            await transaction.rollback();
             return res.status(400).json({
                 success: false,
                 message: 'sucursal_id, producto_presentacion_id y cantidad son obligatorios'
@@ -355,6 +360,7 @@ const ajustarInventario = async (req, res, next) => {
         });
 
         if (!inventario) {
+            await transaction.rollback();
             return res.status(404).json({
                 success: false,
                 message: 'No existe inventario para este producto en esta sucursal'
@@ -364,17 +370,29 @@ const ajustarInventario = async (req, res, next) => {
         const nueva_existencia = inventario.existencia + cantidad;
 
         if (nueva_existencia < 0) {
+            await transaction.rollback();
             return res.status(400).json({
                 success: false,
                 message: `No hay suficiente stock. Existencia actual: ${inventario.existencia}`
             });
         }
 
-        // Actualizar
-        await inventario.update({ existencia: nueva_existencia });
+        // 1. Actualizar inventario
+        await inventario.update({ existencia: nueva_existencia }, { transaction });
 
-        // TODO: Crear MovimientoInventario aquí (FASE 3 siguiente paso)
+        // 2. Crear movimiento de inventario ⭐ NUEVO
+        await MovimientoInventario.create({
+            sucursal_id,
+            producto_presentacion_id,
+            tipo: 'AJUSTE',
+            cantidad,
+            referencia: motivo || 'Ajuste manual'
+        }, { transaction });
 
+        // Commit de la transacción
+        await transaction.commit();
+
+        // Obtener inventario actualizado
         const inventarioActualizado = await InventarioSucursal.findByPk(inventario.id, {
             include: [
                 {
@@ -398,21 +416,27 @@ const ajustarInventario = async (req, res, next) => {
             motivo: motivo || 'Sin motivo especificado',
             existencia_anterior: inventario.existencia,
             existencia_nueva: nueva_existencia,
+            movimiento_registrado: true, // ⭐ NUEVO
             data: inventarioActualizado
         });
     } catch (error) {
+        await transaction.rollback();
         console.error('Error en ajustarInventario:', error);
         next(error);
     }
 };
 
-// Trasladar stock entre sucursales
+
+// ===== REEMPLAZAR trasladarInventario =====
 const trasladarInventario = async (req, res, next) => {
+    const transaction = await db.transaction(); // Usar transacción
+    
     try {
         const { producto_presentacion_id, sucursal_origen_id, sucursal_destino_id, cantidad } = req.body;
 
         // Validaciones
         if (!producto_presentacion_id || !sucursal_origen_id || !sucursal_destino_id || !cantidad) {
+            await transaction.rollback();
             return res.status(400).json({
                 success: false,
                 message: 'Todos los campos son obligatorios'
@@ -420,6 +444,7 @@ const trasladarInventario = async (req, res, next) => {
         }
 
         if (cantidad <= 0) {
+            await transaction.rollback();
             return res.status(400).json({
                 success: false,
                 message: 'La cantidad debe ser mayor a 0'
@@ -427,6 +452,7 @@ const trasladarInventario = async (req, res, next) => {
         }
 
         if (sucursal_origen_id === sucursal_destino_id) {
+            await transaction.rollback();
             return res.status(400).json({
                 success: false,
                 message: 'La sucursal origen y destino no pueden ser la misma'
@@ -442,6 +468,7 @@ const trasladarInventario = async (req, res, next) => {
         });
 
         if (!inventarioOrigen) {
+            await transaction.rollback();
             return res.status(404).json({
                 success: false,
                 message: 'No existe inventario en la sucursal origen'
@@ -449,6 +476,7 @@ const trasladarInventario = async (req, res, next) => {
         }
 
         if (inventarioOrigen.existencia < cantidad) {
+            await transaction.rollback();
             return res.status(400).json({
                 success: false,
                 message: `Stock insuficiente en origen. Disponible: ${inventarioOrigen.existencia}`
@@ -469,23 +497,44 @@ const trasladarInventario = async (req, res, next) => {
                 producto_presentacion_id,
                 existencia: 0,
                 minimo: 0
-            });
+            }, { transaction });
         }
 
-        // Realizar traslado
+        // 1. Actualizar inventario origen
         await inventarioOrigen.update({
             existencia: inventarioOrigen.existencia - cantidad
-        });
+        }, { transaction });
 
+        // 2. Actualizar inventario destino
         await inventarioDestino.update({
             existencia: inventarioDestino.existencia + cantidad
-        });
+        }, { transaction });
 
-        // TODO: Crear MovimientosInventario aquí (FASE 3 siguiente paso)
+        // 3. Crear movimiento de SALIDA en origen ⭐ NUEVO
+        await MovimientoInventario.create({
+            sucursal_id: sucursal_origen_id,
+            producto_presentacion_id,
+            tipo: 'TRASLADO_SALIDA',
+            cantidad: -cantidad,
+            referencia: `Traslado a sucursal ID: ${sucursal_destino_id}`
+        }, { transaction });
+
+        // 4. Crear movimiento de ENTRADA en destino ⭐ NUEVO
+        await MovimientoInventario.create({
+            sucursal_id: sucursal_destino_id,
+            producto_presentacion_id,
+            tipo: 'TRASLADO_ENTRADA',
+            cantidad: cantidad,
+            referencia: `Traslado desde sucursal ID: ${sucursal_origen_id}`
+        }, { transaction });
+
+        // Commit de la transacción
+        await transaction.commit();
 
         res.status(200).json({
             success: true,
             message: 'Traslado realizado exitosamente',
+            movimientos_registrados: 2, // ⭐ NUEVO
             traslado: {
                 cantidad,
                 origen: {
@@ -501,6 +550,7 @@ const trasladarInventario = async (req, res, next) => {
             }
         });
     } catch (error) {
+        await transaction.rollback();
         console.error('Error en trasladarInventario:', error);
         next(error);
     }

@@ -12,7 +12,8 @@ const clienteRoutes = require('./cliente.routes');
 const usuarioRoutes = require('./usuario.routes');
 const productoPresentacionRoutes = require('./productoPresentacion.routes');
 const precioRoutes = require('./precio.routes');
-const inventarioRoutes = require('./inventario.routes'); // ← NUEVO
+const inventarioRoutes = require('./inventario.routes');
+const movimientoRoutes = require('./movimiento.routes'); // ← NUEVO
 
 // Usar rutas
 //router.use('/api', coreRoutes);
@@ -24,6 +25,7 @@ router.use('/api', clienteRoutes);
 router.use('/api', usuarioRoutes);
 router.use('/api', productoPresentacionRoutes);
 router.use('/api', precioRoutes);
-router.use('/api', inventarioRoutes); // ← NUEVO
+router.use('/api', inventarioRoutes);
+router.use('/api', movimientoRoutes); // ← NUEVO
 
 module.exports = router;

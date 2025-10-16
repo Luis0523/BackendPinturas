@@ -14,7 +14,8 @@ const ProductoPresentacion = require('./productos/productoPresentacion.model');
 
 // ===== IMPORTAR MODELOS INVENTARIO =====
 const Precio = require('./inventario/precio.model');
-const InventarioSucursal = require('./inventario/inventarioSucursal.model'); // ← NUEVO
+const InventarioSucursal = require('./inventario/inventarioSucursal.model');
+const MovimientoInventario = require('./inventario/movimientoInventario.model'); // ← NUEVO
 
 // ===== IMPORTAR MODELOS USUARIOS =====
 const Usuario = require('./usuarios/usuario.model');
@@ -112,7 +113,7 @@ Precio.belongsTo(Sucursal, {
     as: 'sucursal'
 });
 
-// ===== RELACIONES INVENTARIO (NUEVAS) =====
+// ===== RELACIONES INVENTARIO =====
 
 // Sucursal -> InventarioSucursal
 Sucursal.hasMany(InventarioSucursal, {
@@ -136,6 +137,30 @@ InventarioSucursal.belongsTo(ProductoPresentacion, {
     as: 'productoPresentacion'
 });
 
+// ===== RELACIONES MOVIMIENTOS INVENTARIO (NUEVAS) =====
+
+// Sucursal -> MovimientoInventario
+Sucursal.hasMany(MovimientoInventario, {
+    foreignKey: 'sucursal_id',
+    as: 'movimientos'
+});
+
+MovimientoInventario.belongsTo(Sucursal, {
+    foreignKey: 'sucursal_id',
+    as: 'sucursal'
+});
+
+// ProductoPresentacion -> MovimientoInventario
+ProductoPresentacion.hasMany(MovimientoInventario, {
+    foreignKey: 'producto_presentacion_id',
+    as: 'movimientos'
+});
+
+MovimientoInventario.belongsTo(ProductoPresentacion, {
+    foreignKey: 'producto_presentacion_id',
+    as: 'productoPresentacion'
+});
+
 // ===== EXPORTAR =====
 module.exports = {
     // Core
@@ -149,7 +174,8 @@ module.exports = {
     ProductoPresentacion,
     // Inventario
     Precio,
-    InventarioSucursal, // ← NUEVO
+    InventarioSucursal,
+    MovimientoInventario, // ← NUEVO
     // Usuarios
     Usuario,
     Cliente,
