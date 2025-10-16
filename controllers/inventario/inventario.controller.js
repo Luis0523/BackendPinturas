@@ -1,30 +1,32 @@
-// controllers/inventario/precio.controller.js
-const { Precio, ProductoPresentacion, Producto, Presentacion, Sucursal, Categoria, Marca } = require('../../models/index');
+// controllers/inventario/inventario.controller.js
+const { InventarioSucursal, ProductoPresentacion, Producto, Presentacion, Sucursal, Categoria, Marca } = require('../../models/index');
 const { Op } = require('sequelize');
 
-// Obtener todos los precios vigentes
-const getPreciosVigentes = async (req, res, next) => {
+// Obtener inventario completo de una sucursal
+const getInventarioSucursal = async (req, res, next) => {
     try {
-        const { sucursal_id, producto_presentacion_id } = req.query;
-        
-        const where = {
-            activo: true,
-            vigente_desde: { [Op.lte]: new Date() },
-            [Op.or]: [
-                { vigente_hasta: null },
-                { vigente_hasta: { [Op.gte]: new Date() } }
-            ]
-        };
-        
-        if (sucursal_id) {
-            where.sucursal_id = sucursal_id;
-        }
-        
-        if (producto_presentacion_id) {
-            where.producto_presentacion_id = producto_presentacion_id;
+        const { sucursal_id } = req.params;
+        const { alerta } = req.query; // ?alerta=true para solo ver alertas
+
+        // Verificar que la sucursal existe
+        const sucursal = await Sucursal.findByPk(sucursal_id);
+        if (!sucursal) {
+            return res.status(404).json({
+                success: false,
+                message: 'Sucursal no encontrada'
+            });
         }
 
-        const precios = await Precio.findAll({
+        const where = { sucursal_id };
+
+        // Si solo quiere alertas
+        if (alerta === 'true') {
+            where.existencia = {
+                [Op.lt]: db.Sequelize.col('minimo')
+            };
+        }
+
+        const inventario = await InventarioSucursal.findAll({
             where,
             include: [
                 {
@@ -44,6 +46,122 @@ const getPreciosVigentes = async (req, res, next) => {
                             as: 'presentacion'
                         }
                     ]
+                }
+            ],
+            order: [[{ model: ProductoPresentacion, as: 'productoPresentacion' }, { model: Producto, as: 'producto' }, 'descripcion', 'ASC']]
+        });
+
+        // Calcular estadísticas
+        const total_productos = inventario.length;
+        const con_stock = inventario.filter(i => i.existencia > 0).length;
+        const sin_stock = inventario.filter(i => i.existencia === 0).length;
+        const con_alerta = inventario.filter(i => i.existencia < i.minimo && i.existencia > 0).length;
+
+        res.status(200).json({
+            success: true,
+            sucursal: {
+                id: sucursal.id,
+                nombre: sucursal.nombre
+            },
+            estadisticas: {
+                total_productos,
+                con_stock,
+                sin_stock,
+                con_alerta
+            },
+            data: inventario.map(inv => ({
+                ...inv.toJSON(),
+                estado: inv.existencia === 0 ? 'AGOTADO' : 
+                       inv.existencia < inv.minimo ? 'BAJO' : 'OK'
+            }))
+        });
+    } catch (error) {
+        console.error('Error en getInventarioSucursal:', error);
+        next(error);
+    }
+};
+
+// Obtener stock de un producto en todas las sucursales
+const getStockProducto = async (req, res, next) => {
+    try {
+        const { producto_presentacion_id } = req.params;
+
+        // Verificar que el producto existe
+        const productoPresentacion = await ProductoPresentacion.findByPk(producto_presentacion_id, {
+            include: [
+                { model: Producto, as: 'producto' },
+                { model: Presentacion, as: 'presentacion' }
+            ]
+        });
+
+        if (!productoPresentacion) {
+            return res.status(404).json({
+                success: false,
+                message: 'Producto-presentación no encontrado'
+            });
+        }
+
+        const inventarios = await InventarioSucursal.findAll({
+            where: { producto_presentacion_id },
+            include: [
+                {
+                    model: Sucursal,
+                    as: 'sucursal',
+                    attributes: ['id', 'nombre', 'direccion']
+                }
+            ],
+            order: [['existencia', 'DESC']]
+        });
+
+        const total_existencia = inventarios.reduce((sum, inv) => sum + inv.existencia, 0);
+        const sucursales_con_stock = inventarios.filter(inv => inv.existencia > 0).length;
+
+        res.status(200).json({
+            success: true,
+            producto: productoPresentacion,
+            estadisticas: {
+                total_existencia,
+                total_sucursales: inventarios.length,
+                sucursales_con_stock
+            },
+            data: inventarios.map(inv => ({
+                ...inv.toJSON(),
+                estado: inv.existencia === 0 ? 'AGOTADO' : 
+                       inv.existencia < inv.minimo ? 'BAJO' : 'OK'
+            }))
+        });
+    } catch (error) {
+        console.error('Error en getStockProducto:', error);
+        next(error);
+    }
+};
+
+// Obtener todas las alertas de stock bajo
+const getAlertasStock = async (req, res, next) => {
+    try {
+        const { sucursal_id } = req.query;
+
+        const where = {
+            existencia: {
+                [Op.lt]: db.Sequelize.col('minimo'),
+                [Op.gt]: 0
+            }
+        };
+
+        if (sucursal_id) {
+            where.sucursal_id = sucursal_id;
+        }
+
+        const alertas = await InventarioSucursal.findAll({
+            where,
+            include: [
+                {
+                    model: ProductoPresentacion,
+                    as: 'productoPresentacion',
+                    include: [
+                        { model: Producto, as: 'producto' },
+                        { model: Presentacion, as: 'presentacion' }
+                    ]
                 },
                 {
                     model: Sucursal,
@@ -51,26 +169,137 @@ const getPreciosVigentes = async (req, res, next) => {
                     attributes: ['id', 'nombre']
                 }
             ],
-            order: [['vigente_desde', 'DESC']]
+            order: [
+                [db.Sequelize.literal('(minimo - existencia)'), 'DESC']
+            ]
         });
 
         res.status(200).json({
             success: true,
-            count: precios.length,
-            data: precios
+            count: alertas.length,
+            data: alertas.map(alerta => ({
+                ...alerta.toJSON(),
+                faltante: alerta.minimo - alerta.existencia
+            }))
         });
     } catch (error) {
-        console.error('Error en getPreciosVigentes:', error);
+        console.error('Error en getAlertasStock:', error);
         next(error);
     }
 };
 
-// Obtener precio por ID
-const getPrecioById = async (req, res, next) => {
+// Obtener productos agotados
+const getProductosAgotados = async (req, res, next) => {
     try {
-        const { id } = req.params;
-        
-        const precio = await Precio.findByPk(id, {
+        const { sucursal_id } = req.query;
+
+        const where = { existencia: 0 };
+
+        if (sucursal_id) {
+            where.sucursal_id = sucursal_id;
+        }
+
+        const agotados = await InventarioSucursal.findAll({
+            where,
+            include: [
+                {
+                    model: ProductoPresentacion,
+                    as: 'productoPresentacion',
+                    include: [
+                        { model: Producto, as: 'producto' },
+                        { model: Presentacion, as: 'presentacion' }
+                    ]
+                },
+                {
+                    model: Sucursal,
+                    as: 'sucursal',
+                    attributes: ['id', 'nombre']
+                }
+            ]
+        });
+
+        res.status(200).json({
+            success: true,
+            count: agotados.length,
+            data: agotados
+        });
+    } catch (error) {
+        console.error('Error en getProductosAgotados:', error);
+        next(error);
+    }
+};
+
+// Crear o actualizar inventario
+const upsertInventario = async (req, res, next) => {
+    try {
+        const { sucursal_id, producto_presentacion_id, existencia, minimo } = req.body;
+
+        // Validaciones
+        if (!sucursal_id || !producto_presentacion_id) {
+            return res.status(400).json({
+                success: false,
+                message: 'sucursal_id y producto_presentacion_id son obligatorios'
+            });
+        }
+
+        if (existencia === undefined) {
+            return res.status(400).json({
+                success: false,
+                message: 'existencia es obligatoria'
+            });
+        }
+
+        if (existencia < 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'La existencia no puede ser negativa'
+            });
+        }
+
+        // Verificar que sucursal existe
+        const sucursal = await Sucursal.findByPk(sucursal_id);
+        if (!sucursal) {
+            return res.status(404).json({
+                success: false,
+                message: 'Sucursal no encontrada'
+            });
+        }
+
+        // Verificar que producto-presentación existe
+        const productoPresentacion = await ProductoPresentacion.findByPk(producto_presentacion_id);
+        if (!productoPresentacion) {
+            return res.status(404).json({
+                success: false,
+                message: 'Producto-presentación no encontrado'
+            });
+        }
+
+        // Buscar si ya existe
+        let inventario = await InventarioSucursal.findOne({
+            where: {
+                sucursal_id,
+                producto_presentacion_id
+            }
+        });
+
+        if (inventario) {
+            // Actualizar existente
+            await inventario.update({
+                existencia,
+                minimo: minimo !== undefined ? minimo : inventario.minimo
+            });
+        } else {
+            // Crear nuevo
+            inventario = await InventarioSucursal.create({
+                sucursal_id,
+                producto_presentacion_id,
+                existencia,
+                minimo: minimo || 0
+            });
+        }
+
+        // Obtener con relaciones
+        const inventarioCompleto = await InventarioSucursal.findByPk(inventario.id, {
             include: [
                 {
                     model: ProductoPresentacion,
@@ -87,221 +316,66 @@ const getPrecioById = async (req, res, next) => {
             ]
         });
 
-        if (!precio) {
-            return res.status(404).json({
-                success: false,
-                message: 'Precio no encontrado'
-            });
-        }
-
         res.status(200).json({
             success: true,
-            data: precio
+            message: 'Inventario actualizado exitosamente',
+            data: inventarioCompleto
         });
     } catch (error) {
-        console.error('Error en getPrecioById:', error);
+        if (error.name === 'SequelizeUniqueConstraintError') {
+            return res.status(400).json({
+                success: false,
+                message: 'Ya existe un registro de inventario para este producto en esta sucursal'
+            });
+        }
+        console.error('Error en upsertInventario:', error);
         next(error);
     }
 };
 
-// Obtener precio vigente de un producto-presentación en una sucursal
-const getPrecioVigenteProducto = async (req, res, next) => {
+// Ajustar inventario (sumar o restar)
+const ajustarInventario = async (req, res, next) => {
     try {
-        const { producto_presentacion_id, sucursal_id } = req.params;
+        const { sucursal_id, producto_presentacion_id, cantidad, motivo } = req.body;
 
-        // Buscar precio específico de sucursal primero
-        let precio = await Precio.findOne({
+        // Validaciones
+        if (!sucursal_id || !producto_presentacion_id || cantidad === undefined) {
+            return res.status(400).json({
+                success: false,
+                message: 'sucursal_id, producto_presentacion_id y cantidad son obligatorios'
+            });
+        }
+
+        // Buscar inventario
+        const inventario = await InventarioSucursal.findOne({
             where: {
-                producto_presentacion_id,
                 sucursal_id,
-                activo: true,
-                vigente_desde: { [Op.lte]: new Date() },
-                [Op.or]: [
-                    { vigente_hasta: null },
-                    { vigente_hasta: { [Op.gte]: new Date() } }
-                ]
-            },
-            include: [
-                { model: ProductoPresentacion, as: 'productoPresentacion' },
-                { model: Sucursal, as: 'sucursal' }
-            ],
-            order: [['vigente_desde', 'DESC']]
-        });
-
-        // Si no hay precio específico, buscar precio global (sucursal_id = NULL)
-        if (!precio) {
-            precio = await Precio.findOne({
-                where: {
-                    producto_presentacion_id,
-                    sucursal_id: null,
-                    activo: true,
-                    vigente_desde: { [Op.lte]: new Date() },
-                    [Op.or]: [
-                        { vigente_hasta: null },
-                        { vigente_hasta: { [Op.gte]: new Date() } }
-                    ]
-                },
-                include: [
-                    { model: ProductoPresentacion, as: 'productoPresentacion' }
-                ],
-                order: [['vigente_desde', 'DESC']]
-            });
-        }
-
-        if (!precio) {
-            return res.status(404).json({
-                success: false,
-                message: 'No se encontró precio vigente para este producto'
-            });
-        }
-
-        // Calcular precio final con descuento
-        const precio_final = precio.precio_venta * (1 - precio.descuento_pct / 100);
-
-        res.status(200).json({
-            success: true,
-            data: {
-                ...precio.toJSON(),
-                precio_final: parseFloat(precio_final.toFixed(2))
+                producto_presentacion_id
             }
         });
-    } catch (error) {
-        console.error('Error en getPrecioVigenteProducto:', error);
-        next(error);
-    }
-};
 
-// Crear nuevo precio
-const createPrecio = async (req, res, next) => {
-    try {
-        const { 
-            producto_presentacion_id, 
-            sucursal_id, 
-            precio_venta, 
-            descuento_pct, 
-            vigente_desde, 
-            vigente_hasta 
-        } = req.body;
-
-        // Validaciones
-        if (!producto_presentacion_id || !precio_venta) {
-            return res.status(400).json({
-                success: false,
-                message: 'producto_presentacion_id y precio_venta son obligatorios'
-            });
-        }
-
-        if (precio_venta <= 0) {
-            return res.status(400).json({
-                success: false,
-                message: 'El precio debe ser mayor a 0'
-            });
-        }
-
-        if (descuento_pct && (descuento_pct < 0 || descuento_pct > 100)) {
-            return res.status(400).json({
-                success: false,
-                message: 'El descuento debe estar entre 0 y 100'
-            });
-        }
-
-        // Verificar que producto-presentación existe
-        const productoPresentacion = await ProductoPresentacion.findByPk(producto_presentacion_id);
-        if (!productoPresentacion) {
+        if (!inventario) {
             return res.status(404).json({
                 success: false,
-                message: 'Producto-presentación no encontrado'
+                message: 'No existe inventario para este producto en esta sucursal'
             });
         }
 
-        // Verificar sucursal si se proporciona
-        if (sucursal_id) {
-            const sucursal = await Sucursal.findByPk(sucursal_id);
-            if (!sucursal) {
-                return res.status(404).json({
-                    success: false,
-                    message: 'Sucursal no encontrada'
-                });
-            }
-        }
+        const nueva_existencia = inventario.existencia + cantidad;
 
-        // Crear precio
-        const precio = await Precio.create({
-            producto_presentacion_id,
-            sucursal_id: sucursal_id || null,
-            precio_venta,
-            descuento_pct: descuento_pct || 0,
-            vigente_desde: vigente_desde || new Date(),
-            vigente_hasta: vigente_hasta || null,
-            activo: true
-        });
-
-        // Obtener precio creado con relaciones
-        const precioCreado = await Precio.findByPk(precio.id, {
-            include: [
-                {
-                    model: ProductoPresentacion,
-                    as: 'productoPresentacion',
-                    include: [
-                        { model: Producto, as: 'producto' },
-                        { model: Presentacion, as: 'presentacion' }
-                    ]
-                },
-                { model: Sucursal, as: 'sucursal' }
-            ]
-        });
-
-        res.status(201).json({
-            success: true,
-            message: 'Precio creado exitosamente',
-            data: precioCreado
-        });
-    } catch (error) {
-        console.error('Error en createPrecio:', error);
-        next(error);
-    }
-};
-
-// Actualizar precio
-const updatePrecio = async (req, res, next) => {
-    try {
-        const { id } = req.params;
-        const { precio_venta, descuento_pct, vigente_hasta, activo } = req.body;
-
-        const precio = await Precio.findByPk(id);
-
-        if (!precio) {
-            return res.status(404).json({
-                success: false,
-                message: 'Precio no encontrado'
-            });
-        }
-
-        // Validaciones
-        if (precio_venta !== undefined && precio_venta <= 0) {
+        if (nueva_existencia < 0) {
             return res.status(400).json({
                 success: false,
-                message: 'El precio debe ser mayor a 0'
-            });
-        }
-
-        if (descuento_pct !== undefined && (descuento_pct < 0 || descuento_pct > 100)) {
-            return res.status(400).json({
-                success: false,
-                message: 'El descuento debe estar entre 0 y 100'
+                message: `No hay suficiente stock. Existencia actual: ${inventario.existencia}`
             });
         }
 
         // Actualizar
-        await precio.update({
-            precio_venta: precio_venta !== undefined ? precio_venta : precio.precio_venta,
-            descuento_pct: descuento_pct !== undefined ? descuento_pct : precio.descuento_pct,
-            vigente_hasta: vigente_hasta !== undefined ? vigente_hasta : precio.vigente_hasta,
-            activo: activo !== undefined ? activo : precio.activo
-        });
+        await inventario.update({ existencia: nueva_existencia });
 
-        // Obtener actualizado con relaciones
-        const precioActualizado = await Precio.findByPk(id, {
+        // TODO: Crear MovimientoInventario aquí (FASE 3 siguiente paso)
+
+        const inventarioActualizado = await InventarioSucursal.findByPk(inventario.id, {
             include: [
                 {
                     model: ProductoPresentacion,
@@ -311,154 +385,133 @@ const updatePrecio = async (req, res, next) => {
                         { model: Presentacion, as: 'presentacion' }
                     ]
                 },
-                { model: Sucursal, as: 'sucursal' }
+                {
+                    model: Sucursal,
+                    as: 'sucursal'
+                }
             ]
         });
 
         res.status(200).json({
             success: true,
-            message: 'Precio actualizado exitosamente',
-            data: precioActualizado
+            message: `Inventario ajustado: ${cantidad > 0 ? '+' : ''}${cantidad}`,
+            motivo: motivo || 'Sin motivo especificado',
+            existencia_anterior: inventario.existencia,
+            existencia_nueva: nueva_existencia,
+            data: inventarioActualizado
         });
     } catch (error) {
-        console.error('Error en updatePrecio:', error);
+        console.error('Error en ajustarInventario:', error);
         next(error);
     }
 };
 
-// Desactivar precio
-const desactivarPrecio = async (req, res, next) => {
+// Trasladar stock entre sucursales
+const trasladarInventario = async (req, res, next) => {
     try {
-        const { id } = req.params;
+        const { producto_presentacion_id, sucursal_origen_id, sucursal_destino_id, cantidad } = req.body;
 
-        const precio = await Precio.findByPk(id);
-
-        if (!precio) {
-            return res.status(404).json({
-                success: false,
-                message: 'Precio no encontrado'
-            });
-        }
-
-        await precio.update({ 
-            activo: false,
-            vigente_hasta: new Date()
-        });
-
-        res.status(200).json({
-            success: true,
-            message: 'Precio desactivado exitosamente'
-        });
-    } catch (error) {
-        console.error('Error en desactivarPrecio:', error);
-        next(error);
-    }
-};
-
-// Obtener catálogo vendible con precios
-const getCatalogoConPrecios = async (req, res, next) => {
-    try {
-        const { sucursal_id } = req.query;
-
-        if (!sucursal_id) {
+        // Validaciones
+        if (!producto_presentacion_id || !sucursal_origen_id || !sucursal_destino_id || !cantidad) {
             return res.status(400).json({
                 success: false,
-                message: 'sucursal_id es obligatorio'
+                message: 'Todos los campos son obligatorios'
             });
         }
 
-        // Obtener todos los productos-presentación activos
-        const productoPresentaciones = await ProductoPresentacion.findAll({
-            where: { activo: true },
-            include: [
-                {
-                    model: Producto,
-                    as: 'producto',
-                    where: { activo: true },
-                    include: [
-                        { model: Categoria, as: 'categoria' },
-                        { model: Marca, as: 'marca' }
-                    ]
-                },
-                {
-                    model: Presentacion,
-                    as: 'presentacion',
-                    where: { activo: true }
-                }
-            ]
+        if (cantidad <= 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'La cantidad debe ser mayor a 0'
+            });
+        }
+
+        if (sucursal_origen_id === sucursal_destino_id) {
+            return res.status(400).json({
+                success: false,
+                message: 'La sucursal origen y destino no pueden ser la misma'
+            });
+        }
+
+        // Buscar inventario origen
+        const inventarioOrigen = await InventarioSucursal.findOne({
+            where: {
+                sucursal_id: sucursal_origen_id,
+                producto_presentacion_id
+            }
         });
 
-        // Para cada producto-presentación, buscar su precio
-        const catalogoConPrecios = await Promise.all(
-            productoPresentaciones.map(async (pp) => {
-                // Buscar precio específico de sucursal
-                let precio = await Precio.findOne({
-                    where: {
-                        producto_presentacion_id: pp.id,
-                        sucursal_id: sucursal_id,
-                        activo: true,
-                        vigente_desde: { [Op.lte]: new Date() },
-                        [Op.or]: [
-                            { vigente_hasta: null },
-                            { vigente_hasta: { [Op.gte]: new Date() } }
-                        ]
-                    },
-                    order: [['vigente_desde', 'DESC']]
-                });
+        if (!inventarioOrigen) {
+            return res.status(404).json({
+                success: false,
+                message: 'No existe inventario en la sucursal origen'
+            });
+        }
 
-                // Si no hay precio específico, buscar global
-                if (!precio) {
-                    precio = await Precio.findOne({
-                        where: {
-                            producto_presentacion_id: pp.id,
-                            sucursal_id: null,
-                            activo: true,
-                            vigente_desde: { [Op.lte]: new Date() },
-                            [Op.or]: [
-                                { vigente_hasta: null },
-                                { vigente_hasta: { [Op.gte]: new Date() } }
-                            ]
-                        },
-                        order: [['vigente_desde', 'DESC']]
-                    });
-                }
+        if (inventarioOrigen.existencia < cantidad) {
+            return res.status(400).json({
+                success: false,
+                message: `Stock insuficiente en origen. Disponible: ${inventarioOrigen.existencia}`
+            });
+        }
 
-                const precio_final = precio 
-                    ? precio.precio_venta * (1 - precio.descuento_pct / 100)
-                    : null;
+        // Buscar o crear inventario destino
+        let inventarioDestino = await InventarioSucursal.findOne({
+            where: {
+                sucursal_id: sucursal_destino_id,
+                producto_presentacion_id
+            }
+        });
 
-                return {
-                    ...pp.toJSON(),
-                    precio: precio ? {
-                        precio_venta: parseFloat(precio.precio_venta),
-                        descuento_pct: parseFloat(precio.descuento_pct),
-                        precio_final: precio_final ? parseFloat(precio_final.toFixed(2)) : null,
-                        sucursal_especifico: precio.sucursal_id !== null
-                    } : null
-                };
-            })
-        );
+        if (!inventarioDestino) {
+            inventarioDestino = await InventarioSucursal.create({
+                sucursal_id: sucursal_destino_id,
+                producto_presentacion_id,
+                existencia: 0,
+                minimo: 0
+            });
+        }
+
+        // Realizar traslado
+        await inventarioOrigen.update({
+            existencia: inventarioOrigen.existencia - cantidad
+        });
+
+        await inventarioDestino.update({
+            existencia: inventarioDestino.existencia + cantidad
+        });
+
+        // TODO: Crear MovimientosInventario aquí (FASE 3 siguiente paso)
 
         res.status(200).json({
             success: true,
-            sucursal_id: parseInt(sucursal_id),
-            count: catalogoConPrecios.length,
-            con_precio: catalogoConPrecios.filter(p => p.precio).length,
-            sin_precio: catalogoConPrecios.filter(p => !p.precio).length,
-            data: catalogoConPrecios
+            message: 'Traslado realizado exitosamente',
+            traslado: {
+                cantidad,
+                origen: {
+                    sucursal_id: sucursal_origen_id,
+                    existencia_anterior: inventarioOrigen.existencia + cantidad,
+                    existencia_nueva: inventarioOrigen.existencia
+                },
+                destino: {
+                    sucursal_id: sucursal_destino_id,
+                    existencia_anterior: inventarioDestino.existencia - cantidad,
+                    existencia_nueva: inventarioDestino.existencia
+                }
+            }
         });
     } catch (error) {
-        console.error('Error en getCatalogoConPrecios:', error);
+        console.error('Error en trasladarInventario:', error);
         next(error);
     }
 };
 
 module.exports = {
-    getPreciosVigentes,
-    getPrecioById,
-    getPrecioVigenteProducto,
-    createPrecio,
-    updatePrecio,
-    desactivarPrecio,
-    getCatalogoConPrecios
+    getInventarioSucursal,
+    getStockProducto,
+    getAlertasStock,
+    getProductosAgotados,
+    upsertInventario,
+    ajustarInventario,
+    trasladarInventario
 };
