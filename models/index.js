@@ -21,10 +21,17 @@ const MovimientoInventario = require('./inventario/movimientoInventario.model');
 const Usuario = require('./usuarios/usuario.model');
 const Cliente = require('./usuarios/cliente.model');
 
-// ===== IMPORTAR MODELOS VENTAS (NUEVOS) =====
+// ===== IMPORTAR MODELOS VENTAS =====
 const Factura = require('./ventas/factura.model');
 const DetalleFactura = require('./ventas/detalleFactura.model');
 const Pago = require('./ventas/pago.model');
+
+// ===== IMPORTAR MODELOS COMPRAS (NUEVOS) =====
+const Proveedor = require('./compras/proveedor.model');
+const OrdenCompra = require('./compras/ordenCompra.model');
+const DetalleOrdenCompra = require('./compras/detalleOrdenCompra.model');
+const Recepcion = require('./compras/recepcion.model');
+const DetalleRecepcion = require('./compras/detalleRecepcion.model');
 
 // ===== DEFINIR RELACIONES EXISTENTES =====
 
@@ -160,7 +167,7 @@ MovimientoInventario.belongsTo(ProductoPresentacion, {
     as: 'productoPresentacion'
 });
 
-// ===== RELACIONES FACTURAS (NUEVAS) =====
+// ===== RELACIONES FACTURAS =====
 
 // Cliente -> Factura
 Cliente.hasMany(Factura, {
@@ -239,6 +246,118 @@ Pago.belongsTo(Factura, {
     as: 'factura'
 });
 
+// ===== RELACIONES COMPRAS (NUEVAS) =====
+
+// Proveedor -> OrdenCompra
+Proveedor.hasMany(OrdenCompra, {
+    foreignKey: 'proveedor_id',
+    as: 'ordenes'
+});
+
+OrdenCompra.belongsTo(Proveedor, {
+    foreignKey: 'proveedor_id',
+    as: 'proveedor'
+});
+
+// Sucursal -> OrdenCompra
+Sucursal.hasMany(OrdenCompra, {
+    foreignKey: 'sucursal_id',
+    as: 'ordenes_compra'
+});
+
+OrdenCompra.belongsTo(Sucursal, {
+    foreignKey: 'sucursal_id',
+    as: 'sucursal'
+});
+
+// Usuario -> OrdenCompra (quien crea)
+Usuario.hasMany(OrdenCompra, {
+    foreignKey: 'usuario_id',
+    as: 'ordenes_compra'
+});
+
+OrdenCompra.belongsTo(Usuario, {
+    foreignKey: 'usuario_id',
+    as: 'usuario'
+});
+
+// OrdenCompra -> DetalleOrdenCompra
+OrdenCompra.hasMany(DetalleOrdenCompra, {
+    foreignKey: 'orden_compra_id',
+    as: 'detalles'
+});
+
+DetalleOrdenCompra.belongsTo(OrdenCompra, {
+    foreignKey: 'orden_compra_id',
+    as: 'ordenCompra'
+});
+
+// ProductoPresentacion -> DetalleOrdenCompra
+ProductoPresentacion.hasMany(DetalleOrdenCompra, {
+    foreignKey: 'producto_presentacion_id',
+    as: 'detalles_orden_compra'
+});
+
+DetalleOrdenCompra.belongsTo(ProductoPresentacion, {
+    foreignKey: 'producto_presentacion_id',
+    as: 'productoPresentacion'
+});
+
+// OrdenCompra -> Recepcion
+OrdenCompra.hasMany(Recepcion, {
+    foreignKey: 'orden_compra_id',
+    as: 'recepciones'
+});
+
+Recepcion.belongsTo(OrdenCompra, {
+    foreignKey: 'orden_compra_id',
+    as: 'ordenCompra'
+});
+
+// Sucursal -> Recepcion
+Sucursal.hasMany(Recepcion, {
+    foreignKey: 'sucursal_id',
+    as: 'recepciones'
+});
+
+Recepcion.belongsTo(Sucursal, {
+    foreignKey: 'sucursal_id',
+    as: 'sucursal'
+});
+
+// Usuario -> Recepcion (quien recibe)
+Usuario.hasMany(Recepcion, {
+    foreignKey: 'usuario_id',
+    as: 'recepciones'
+});
+
+Recepcion.belongsTo(Usuario, {
+    foreignKey: 'usuario_id',
+    as: 'usuario'
+});
+
+// Recepcion -> DetalleRecepcion
+Recepcion.hasMany(DetalleRecepcion, {
+    foreignKey: 'recepcion_id',
+    as: 'detalles'
+});
+
+DetalleRecepcion.belongsTo(Recepcion, {
+    foreignKey: 'recepcion_id',
+    as: 'recepcion'
+});
+
+// DetalleOrdenCompra -> DetalleRecepcion
+DetalleOrdenCompra.hasMany(DetalleRecepcion, {
+    foreignKey: 'detalle_orden_id',
+    as: 'recepciones'
+});
+
+DetalleRecepcion.belongsTo(DetalleOrdenCompra, {
+    foreignKey: 'detalle_orden_id',
+    as: 'detalleOrden'
+});
+
 // ===== EXPORTAR =====
 module.exports = {
     // Core
@@ -257,10 +376,16 @@ module.exports = {
     // Usuarios
     Usuario,
     Cliente,
-    // Ventas (NUEVOS)
+    // Ventas
     Factura,
     DetalleFactura,
     Pago,
+    // Compras (NUEVOS)
+    Proveedor,
+    OrdenCompra,
+    DetalleOrdenCompra,
+    Recepcion,
+    DetalleRecepcion,
     // Sequelize
     sequelize: db
 };

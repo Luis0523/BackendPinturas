@@ -1,0 +1,402 @@
+// routes/cliente.routes.js
+const express = require('express');
+const router = express.Router();
+const clienteController = require('../controllers/usuarios/cliente.controller');
+
+// Obtener todos los clientes (con filtros opcionales)
+router.get('/clientes', clienteController.getClientes);
+
+// Buscar cliente por NIT o email
+router.get('/clientes/buscar', clienteController.buscarCliente);
+
+// Buscar clientes cercanos por GPS
+router.get('/clientes/cercanos', clienteController.getClientesCercanos);
+
+// Obtener cliente por ID
+router.get('/clientes/:id', clienteController.getClienteById);
+
+// Crear nuevo cliente
+router.post('/clientes', clienteController.createCliente);
+
+// Actualizar cliente
+router.put('/clientes/:id', clienteController.updateCliente);
+
+// Eliminar cliente
+router.delete('/clientes/:id', clienteController.deleteCliente);
+
+// Verificar cliente
+router.patch('/clientes/:id/verificar', clienteController.verificarCliente);
+
+module.exports = router;
+
+
+// routes/inventario.routes.js
+const express = require('express');
+const router = express.Router();
+const inventarioController = require('../controllers/inventario/inventario.controller');
+
+// Obtener inventario completo de una sucursal
+router.get('/inventario/sucursal/:sucursal_id', inventarioController.getInventarioSucursal);
+
+// Obtener inventario con alertas de una sucursal
+router.get('/inventario/sucursal/:sucursal_id/alertas', inventarioController.getInventarioSucursal);
+
+// Obtener stock de un producto en todas las sucursales
+router.get('/inventario/producto-presentacion/:producto_presentacion_id', inventarioController.getStockProducto);
+
+// Obtener todas las alertas de stock bajo
+router.get('/inventario/alertas', inventarioController.getAlertasStock);
+
+// Obtener productos agotados
+router.get('/inventario/agotados', inventarioController.getProductosAgotados);
+
+// Crear o actualizar inventario
+router.post('/inventario', inventarioController.upsertInventario);
+
+// Ajustar inventario (sumar o restar)
+router.post('/inventario/ajuste', inventarioController.ajustarInventario);
+
+// Trasladar stock entre sucursales
+router.post('/inventario/traslado', inventarioController.trasladarInventario);
+
+module.exports = router;
+
+
+// routes/inventario.routes.js
+const express = require('express');
+const router = express.Router();
+const inventarioController = require('../controllers/inventario/inventario.controller');
+
+// Obtener inventario completo de una sucursal
+router.get('/inventario/sucursal/:sucursal_id', inventarioController.getInventarioSucursal);
+
+// Obtener inventario con alertas de una sucursal
+router.get('/inventario/sucursal/:sucursal_id/alertas', inventarioController.getInventarioSucursal);
+
+// Obtener stock de un producto en todas las sucursales
+router.get('/inventario/producto-presentacion/:producto_presentacion_id', inventarioController.getStockProducto);
+
+// Obtener todas las alertas de stock bajo
+router.get('/inventario/alertas', inventarioController.getAlertasStock);
+
+// Obtener productos agotados
+router.get('/inventario/agotados', inventarioController.getProductosAgotados);
+
+// Crear o actualizar inventario
+router.post('/inventario', inventarioController.upsertInventario);
+
+// Ajustar inventario (sumar o restar)
+router.post('/inventario/ajuste', inventarioController.ajustarInventario);
+
+// Trasladar stock entre sucursales
+router.post('/inventario/traslado', inventarioController.trasladarInventario);
+
+module.exports = router;
+
+
+
+// routes/movimiento.routes.js
+const express = require('express');
+const router = express.Router();
+const movimientoController = require('../controllers/inventario/movimiento.controller');
+
+// Obtener resumen de movimientos
+router.get('/movimientos/resumen', movimientoController.getResumenMovimientos);
+
+// Obtener todos los movimientos con filtros
+router.get('/movimientos', movimientoController.getMovimientos);
+
+// Obtener movimientos de una sucursal
+router.get('/movimientos/sucursal/:sucursal_id', movimientoController.getMovimientosSucursal);
+
+// Obtener movimientos de un producto
+router.get('/movimientos/producto-presentacion/:producto_presentacion_id', movimientoController.getMovimientosProducto);
+
+// Obtener movimientos por tipo
+router.get('/movimientos/tipo/:tipo', movimientoController.getMovimientosPorTipo);
+
+// Crear movimiento manual (raro - normalmente se crean automáticamente)
+router.post('/movimientos', movimientoController.createMovimiento);
+
+module.exports = router;
+
+// routes/precio.routes.js
+const express = require('express');
+const router = express.Router();
+const precioController = require('../controllers/inventario/precio.controller');
+
+// Obtener catálogo vendible con precios (endpoint especial)
+router.get('/catalogo-con-precios', precioController.getCatalogoConPrecios);
+
+// Obtener todos los precios vigentes
+router.get('/precios', precioController.getPreciosVigentes);
+
+// Obtener precio vigente de un producto en una sucursal
+router.get('/precios/vigente/:producto_presentacion_id/:sucursal_id', precioController.getPrecioVigenteProducto);
+
+// Obtener precio por ID
+router.get('/precios/:id', precioController.getPrecioById);
+
+// Crear nuevo precio
+router.post('/precios', precioController.createPrecio);
+
+// Actualizar precio
+router.put('/precios/:id', precioController.updatePrecio);
+
+// Desactivar precio
+router.patch('/precios/:id/desactivar', precioController.desactivarPrecio);
+
+module.exports = router;
+
+
+
+// routes/presentacion.routes.js
+const express = require('express');
+const router = express.Router();
+const presentacionController = require('../controllers/core/presentacion.controller');
+
+// Obtener todas las presentaciones activas
+router.get('/presentaciones', presentacionController.getPresentaciones);
+
+// Obtener todas (incluyendo inactivas)
+router.get('/presentaciones/all', presentacionController.getAllPresentaciones);
+
+// Obtener presentación por ID
+router.get('/presentaciones/:id', presentacionController.getPresentacionById);
+
+// Crear nueva presentación
+router.post('/presentaciones', presentacionController.createPresentacion);
+
+// Actualizar presentación
+router.put('/presentaciones/:id', presentacionController.updatePresentacion);
+
+// Desactivar presentación (soft delete)
+router.delete('/presentaciones/:id', presentacionController.deletePresentacion);
+
+// Reactivar presentación
+router.patch('/presentaciones/:id/reactivar', presentacionController.reactivarPresentacion);
+
+module.exports = router;
+
+
+// routes/productoPresentacion.routes.js
+const express = require('express');
+const router = express.Router();
+const productoPresentacionController = require('../controllers/productos/productoPresentacion.controller');
+
+// Catálogo vendible completo
+router.get('/catalogo-vendible', productoPresentacionController.getCatalogoVendible);
+
+// Presentaciones de un producto específico
+router.get('/productos/:producto_id/presentaciones', productoPresentacionController.getPresentacionesDeProducto);
+
+// Agregar múltiples presentaciones a un producto
+router.post('/productos/:producto_id/presentaciones', productoPresentacionController.agregarPresentacionesAProducto);
+
+// Obtener una combinación por ID
+router.get('/producto-presentacion/:id', productoPresentacionController.getProductoPresentacionById);
+
+// Crear combinación individual
+router.post('/producto-presentacion', productoPresentacionController.createProductoPresentacion);
+
+// Desactivar combinación
+router.patch('/producto-presentacion/:id/desactivar', productoPresentacionController.desactivarProductoPresentacion);
+
+// Reactivar combinación
+router.patch('/producto-presentacion/:id/reactivar', productoPresentacionController.reactivarProductoPresentacion);
+
+// Eliminar combinación (hard delete)
+router.delete('/producto-presentacion/:id', productoPresentacionController.deleteProductoPresentacion);
+
+module.exports = router;
+
+
+// routes/producto.routes.js
+const express = require('express');
+const router = express.Router();
+const productoController = require('../controllers/producto.controller');
+
+// Rutas de productos
+router.get('/productos', productoController.getProductos);
+router.get('/productos/:id', productoController.getProductoById);
+router.post('/productos', productoController.createProducto);
+router.put('/productos/:id', productoController.updateProducto);
+router.delete('/productos/:id', productoController.deleteProducto);
+
+// IMPORTANTE: Exportar el router
+module.exports = router;
+
+
+// routes/rol.routes.js
+const express = require('express');
+const router = express.Router();
+const rolController = require('../controllers/core/rol.controller');
+
+// Obtener todos los roles
+router.get('/roles', rolController.getRoles);
+
+// Obtener rol por ID
+router.get('/roles/:id', rolController.getRolById);
+
+// Crear nuevo rol
+router.post('/roles', rolController.createRol);
+
+// Actualizar rol
+router.put('/roles/:id', rolController.updateRol);
+
+// Eliminar rol
+router.delete('/roles/:id', rolController.deleteRol);
+
+module.exports = router;
+
+
+
+// routes/sucursal.routes.js
+const express = require('express');
+const router = express.Router();
+const sucursalController = require('../controllers/core/sucursal.controller');
+
+// Obtener todas las sucursales activas
+router.get('/sucursales', sucursalController.getSucursales);
+
+// Obtener todas (incluyendo inactivas)
+router.get('/sucursales/all', sucursalController.getAllSucursales);
+
+// Buscar sucursales cercanas por GPS
+router.get('/sucursales/cercanas', sucursalController.getSucursalesCercanas);
+
+// Obtener sucursal por ID
+router.get('/sucursales/:id', sucursalController.getSucursalById);
+
+// Crear nueva sucursal
+router.post('/sucursales', sucursalController.createSucursal);
+
+// Actualizar sucursal
+router.put('/sucursales/:id', sucursalController.updateSucursal);
+
+// Desactivar sucursal (soft delete)
+router.delete('/sucursales/:id', sucursalController.deleteSucursal);
+
+// Reactivar sucursal
+router.patch('/sucursales/:id/reactivar', sucursalController.reactivarSucursal);
+
+module.exports = router;
+
+
+// routes/usuario.routes.js
+const express = require('express');
+const router = express.Router();
+const usuarioController = require('../controllers/usuarios/usuario.controller');
+
+// Obtener todos los usuarios (con filtros opcionales)
+router.get('/usuarios', usuarioController.getUsuarios);
+
+// Buscar usuario por email o DPI
+router.get('/usuarios/buscar', usuarioController.buscarUsuario);
+
+// Obtener usuarios por rol
+//router.get('/usuarios/rol/:rol_id', usuarioController.getUsuariosPorRol);
+
+// Obtener usuarios por sucursal
+//router.get('/usuarios/sucursal/:sucursal_id', usuarioController.getUsuariosPorSucursal);
+
+// Obtener usuario por ID
+router.get('/usuarios/:id', usuarioController.getUsuarioById);
+
+// Crear nuevo usuario
+router.post('/usuarios', usuarioController.createUsuario);
+
+// Actualizar usuario
+router.put('/usuarios/:id', usuarioController.updateUsuario);
+
+// Desactivar usuario (soft delete)
+router.delete('/usuarios/:id', usuarioController.deleteUsuario);
+
+// Reactivar usuario
+//router.patch('/usuarios/:id/reactivar', usuarioController.reactivarUsuario);
+
+// Cambiar password
+//router.patch('/usuarios/:id/cambiar-password', usuarioController.cambiarPassword);
+
+
+
+
+// ==================== RUTAS DE AUTENTICACIÓN ====================
+router.post('/usuarios/login', usuarioController.login);
+router.post('/usuarios/logout', usuarioController.logout);
+router.post('/usuarios/refresh-token', usuarioController.refreshToken);
+router.get('/usuarios/verify-token', usuarioController.verifyToken);
+router.post('/usuarios/forgot-password', usuarioController.forgotPassword);
+router.post('/usuarios/reset-password', usuarioController.resetPassword);
+router.patch('/usuarios/:id/cambiar-password', usuarioController.cambiarPassword);
+
+module.exports = router;
+
+// routes/ventas.routes.js
+const express = require('express');
+const router = express.Router();
+
+// ===== IMPORTAR CONTROLLERS =====
+const {
+    createFactura,
+    getFacturas,
+    getFacturaById,
+    getPagosFactura,
+    anularFactura
+} = require('../controllers/ventas/factura.controller');
+
+// Si tienes otros controllers de ventas, impórtalos aquí
+// const carritoController = require('../controllers/ventas/carrito.controller');
+// const cotizacionController = require('../controllers/ventas/cotizacion.controller');
+
+// =============================================
+// RUTAS DE FACTURAS
+// =============================================
+
+/**
+ * @route   POST /api/ventas/facturas
+ * @desc    Crear nueva factura con detalles y pagos
+ * @access  Private
+ */
+router.post('/facturas', createFactura);
+
+/**
+ * @route   GET /api/ventas/facturas
+ * @desc    Obtener todas las facturas con filtros opcionales
+ * @query   sucursal_id, cliente_id, usuario_id, estado, desde, hasta, limite
+ * @access  Private
+ */
+router.get('/facturas', getFacturas);
+
+/**
+ * @route   GET /api/ventas/facturas/:id
+ * @desc    Obtener factura por ID con todos los detalles
+ * @access  Private
+ */
+router.get('/facturas/:id', getFacturaById);
+
+/**
+ * @route   GET /api/ventas/facturas/:id/pagos
+ * @desc    Obtener todos los pagos de una factura específica
+ * @access  Private
+ */
+router.get('/facturas/:id/pagos', getPagosFactura);
+
+// =============================================
+// RUTAS DE CARRITO (Si las tienes)
+// =============================================
+// router.post('/carrito', carritoController.create);
+// router.get('/carrito/:id', carritoController.getById);
+
+// =============================================
+// RUTAS DE COTIZACIONES (Si las tienes)
+// =============================================
+// router.post('/cotizaciones', cotizacionController.create);
+// router.get('/cotizaciones', cotizacionController.getAll);
+
+
+router.put('/facturas/:id/anular', anularFactura); 
+module.exports = router;
+
+
+

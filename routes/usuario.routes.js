@@ -33,4 +33,16 @@ router.delete('/usuarios/:id', usuarioController.deleteUsuario);
 // Cambiar password
 //router.patch('/usuarios/:id/cambiar-password', usuarioController.cambiarPassword);
 
+
+
+
+// ==================== RUTAS DE AUTENTICACIÓN ====================
+router.post('/usuarios/login', usuarioController.login);
+router.post('/usuarios/logout', usuarioController.logout);
+router.post('/usuarios/refresh-token', usuarioController.refreshToken);
+router.get('/usuarios/verify-token', usuarioController.verifyToken);
+router.post('/usuarios/forgot-password', usuarioController.forgotPassword);
+router.post('/usuarios/reset-password', usuarioController.resetPassword);
+router.patch('/usuarios/:id/cambiar-password', usuarioController.cambiarPassword);
+
 module.exports = router;

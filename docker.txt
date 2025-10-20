@@ -1,0 +1,36 @@
+mysql en docker
+1)$ docker pull mysql:8.0.39-debian
+2)$ sudo docker image ls
+3)$ sudo docker container run --name primermysql -e MYSQL_ROOT_PASSWORD=chomani mysql:8.0.39-debian
+4)$ sudo docker container ps
+5)probar conectarse con tableplus y no se podra (parametros: DatabaseHost: 127.0.0.1, puerto: 3306, database user: root, password:chomani)
+6)$ sudo docker container rm -f [idcontenedor]
+7)$ sudo docker container run --name ultimomysql -p 3307:3306 -d -e MYSQL_ROOT_PASSWORD=chomani mysql:8.0.39-debian
+8)probar conectarse con tableplus y no se podra (parametros: DatabaseHost: 127.0.0.1, puerto: 3307, database user: root, password:chomani)
+9)entrar a linea de comandos en mysql con el comando exec: $ sudo docker exec -it 2ac /bin/bash
+10)# ls
+11)# mysql -u root -p
+12)mysql> show schemas;
+13)mysql> create schema dbprueba;
+14)detener y arrancar el contenedor para ver si siguen los datos (con los comandos stop y start)
+15)borrar el contenedor y volverlo a crear para verificar si los datos persisten (con los comandos rm y run)
+16)Verificaran que el Id del contenedor es diferente y que los datos se borraron.
+17)VOLUMENES:Existen tres tipos de volumenes en docker(Named-Volumen: son los mas utilizados, primero se c
+
+crea al volumen y despues se utiliza el nombre para indicar la ubicacion, Bind-Volumen: utiliza los paths absolutos por ejemplo para cargar el directorio de desarrollo donde esta el codigo fuente,Anonymous-Volumen:Docker se encarga de ubicar y dar nombre el volumen, solo se le indica el directorio que queremos que tenga persistencia), ahora crear nuevamente el contenedor con un volumen:(agregar el paramaetro:-v /ruta/de/directorio:/var/lib/mysql)
+18)sudo docker container run --name ultimomysql -p 3307:3306 -v /home/groot/Documentos/Universidad/RedesII_2024/volumenprueba:/var/lib/mysql -d -e MYSQL_ROOT_PASSWORD=chomani mysql:8.0.39-debian
+20)verificar que datos tiene la ruta del host
+21) borrar el contenedor y crear otro y verificar si persisten los datos
+22) correr PHPMYADMIM
+23)$ sudo docker pull phpmyadmin:latest
+24)$ sudo docker container run --name gphpmyadmin -p 8081:80 -d -e PMA_ARBITRARY=1 phpmyadmin:latest
+25)Verificar que conecte, pero no podrá.
+26)REDES:Creacion de un NETWORK para intercomunicar los contenedores.
+27)sudo docker network ls
+28)sudo docker network
+29)sudo docker network create redmysql
+30)borrar los contenedores anteriores
+31)Volver a correr los contenedores agregando la variable de entorno de la red: --network mi-red
+	sudo docker container run --name ultimomysql -p 3307:3306 --network redmysql -v /home/groot/Documentos/Universidad/RedesII_2024/volumenprueba:/var/lib/mysql -d -e MYSQL_ROOT_PASSWORD=chomani mysql:8.0.39-debian
+	sudo docker container run --name gphpmyadmin -p 8081:80 --network redmysql -d -e PMA_HOST=ultimomysql phpmyadmin
+32) volver a intentar conectarse a la base de datos.
