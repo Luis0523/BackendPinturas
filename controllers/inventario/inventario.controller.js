@@ -1,5 +1,5 @@
 // controllers/inventario/inventario.controller.js
-const { InventarioSucursal, ProductoPresentacion, Producto, Presentacion, Sucursal, Categoria, Marca, MovimientoInventario } = require('../../models/index');
+const { InventarioSucursal, ProductoPresentacion, Producto, Presentacion, Sucursal, Categoria, Marca, MovimientoInventario, Precio } = require('../../models/index');
 const { Op } = require('sequelize');
 const db = require('../../db/db');
 
@@ -45,6 +45,17 @@ const getInventarioSucursal = async (req, res, next) => {
                         {
                             model: Presentacion,
                             as: 'presentacion'
+                        },
+                        {
+                            model: Precio,
+                            as: 'precios',
+                            where: {
+                                sucursal_id: sucursal_id,
+                                activo: true
+                            },
+                            required: false, // No obligatorio (por si no hay precio registrado)
+                            order: [['vigente_desde', 'DESC']], // El más reciente primero
+                            limit: 1 // Solo el precio actual
                         }
                     ]
                 }
@@ -72,8 +83,8 @@ const getInventarioSucursal = async (req, res, next) => {
             },
             data: inventario.map(inv => ({
                 ...inv.toJSON(),
-                estado: inv.existencia === 0 ? 'AGOTADO' : 
-                       inv.existencia < inv.minimo ? 'BAJO' : 'OK'
+                estado: inv.existencia === 0 ? 'AGOTADO' :
+                    inv.existencia < inv.minimo ? 'BAJO' : 'OK'
             }))
         });
     } catch (error) {
@@ -127,8 +138,8 @@ const getStockProducto = async (req, res, next) => {
             },
             data: inventarios.map(inv => ({
                 ...inv.toJSON(),
-                estado: inv.existencia === 0 ? 'AGOTADO' : 
-                       inv.existencia < inv.minimo ? 'BAJO' : 'OK'
+                estado: inv.existencia === 0 ? 'AGOTADO' :
+                    inv.existencia < inv.minimo ? 'BAJO' : 'OK'
             }))
         });
     } catch (error) {
@@ -338,7 +349,7 @@ const upsertInventario = async (req, res, next) => {
 // ===== REEMPLAZAR ajustarInventario =====
 const ajustarInventario = async (req, res, next) => {
     const transaction = await db.transaction(); // Usar transacción
-    
+
     try {
         const { sucursal_id, producto_presentacion_id, cantidad, motivo } = req.body;
 
@@ -430,7 +441,7 @@ const ajustarInventario = async (req, res, next) => {
 // ===== REEMPLAZAR trasladarInventario =====
 const trasladarInventario = async (req, res, next) => {
     const transaction = await db.transaction(); // Usar transacción
-    
+
     try {
         const { producto_presentacion_id, sucursal_origen_id, sucursal_destino_id, cantidad } = req.body;
 

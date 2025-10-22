@@ -1,27 +1,57 @@
-// routes/precio.routes.js
+// routes/precios.routes.js
 const express = require('express');
 const router = express.Router();
 const precioController = require('../controllers/inventario/precio.controller');
 
-// Obtener catálogo vendible con precios (endpoint especial)
+// =============================================
+// RUTAS ESPECIALES (Primero, antes de las genéricas)
+// =============================================
+
+/**
+ * @route   GET /api/precios/catalogo-con-precios?sucursal_id=1
+ * @desc    Obtener catálogo vendible con precios
+ */
 router.get('/catalogo-con-precios', precioController.getCatalogoConPrecios);
 
-// Obtener todos los precios vigentes
-router.get('/precios', precioController.getPreciosVigentes);
+/**
+ * @route   GET /api/precios/vigente/:producto_presentacion_id/:sucursal_id
+ * @desc    Obtener precio vigente de un producto en una sucursal
+ */
+router.get('/vigente/:producto_presentacion_id/:sucursal_id', precioController.getPrecioVigenteProducto);
 
-// Obtener precio vigente de un producto en una sucursal
-router.get('/precios/vigente/:producto_presentacion_id/:sucursal_id', precioController.getPrecioVigenteProducto);
+// =============================================
+// RUTAS GENÉRICAS (Después de las específicas)
+// =============================================
 
-// Obtener precio por ID
-router.get('/precios/:id', precioController.getPrecioById);
+/**
+ * @route   GET /api/precios
+ * @desc    Obtener todos los precios vigentes
+ * @query   sucursal_id, producto_presentacion_id
+ */
+router.get('/', precioController.getPreciosVigentes);
 
-// Crear nuevo precio
-router.post('/precios', precioController.createPrecio);
+/**
+ * @route   POST /api/precios
+ * @desc    Crear nuevo precio
+ */
+router.post('/', precioController.createPrecio);
 
-// Actualizar precio
-router.put('/precios/:id', precioController.updatePrecio);
+/**
+ * @route   GET /api/precios/:id
+ * @desc    Obtener precio por ID
+ */
+router.get('/:id', precioController.getPrecioById);
 
-// Desactivar precio
-router.patch('/precios/:id/desactivar', precioController.desactivarPrecio);
+/**
+ * @route   PUT /api/precios/:id
+ * @desc    Actualizar precio
+ */
+router.put('/:id', precioController.updatePrecio);
+
+/**
+ * @route   PATCH /api/precios/:id/desactivar
+ * @desc    Desactivar precio
+ */
+router.patch('/:id/desactivar', precioController.desactivarPrecio);
 
 module.exports = router;
