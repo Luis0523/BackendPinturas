@@ -105,15 +105,34 @@ const getPrecioById = async (req, res, next) => {
 };
 
 // Obtener precio vigente de un producto-presentación en una sucursal
+// Obtener precio vigente de un producto-presentación en una sucursal
 const getPrecioVigenteProducto = async (req, res, next) => {
+    console.log('HOLA, ENTRE AL CONTROLADOR');
     try {
         const { producto_presentacion_id, sucursal_id } = req.params;
+        console.log('AQUI, FUI LLAMADO');
+        // ✅ CONVERTIR A NÚMEROS
+        const ppId = parseInt(producto_presentacion_id);
+        const sucId = parseInt(sucursal_id);
+
+        // ✅ VALIDAR QUE SEAN NÚMEROS VÁLIDOS
+        if (isNaN(ppId) || isNaN(sucId)) {
+            return res.status(400).json({
+                success: false,
+                message: 'IDs inválidos. Deben ser números'
+            });
+        }
+
+        console.log('🔍 Buscando precio para:', {
+            producto_presentacion_id: ppId,
+            sucursal_id: sucId
+        });
 
         // Buscar precio específico de sucursal primero
         let precio = await Precio.findOne({
             where: {
-                producto_presentacion_id,
-                sucursal_id,
+                producto_presentacion_id: ppId,  // ✅ Usar el número convertido
+                sucursal_id: sucId,               // ✅ Usar el número convertido
                 activo: true,
                 vigente_desde: { [Op.lte]: new Date() },
                 [Op.or]: [
@@ -122,17 +141,41 @@ const getPrecioVigenteProducto = async (req, res, next) => {
                 ]
             },
             include: [
-                { model: ProductoPresentacion, as: 'productoPresentacion' },
-                { model: Sucursal, as: 'sucursal' }
+                {
+                    model: ProductoPresentacion,
+                    as: 'productoPresentacion',
+                    include: [  // ✅ AGREGAR INCLUDES FALTANTES
+                        {
+                            model: Producto,
+                            as: 'producto',
+                            include: [
+                                { model: Categoria, as: 'categoria' },
+                                { model: Marca, as: 'marca' }
+                            ]
+                        },
+                        {
+                            model: Presentacion,
+                            as: 'presentacion'
+                        }
+                    ]
+                },
+                {
+                    model: Sucursal,
+                    as: 'sucursal'
+                }
             ],
             order: [['vigente_desde', 'DESC']]
         });
 
+        console.log('✅ Precio encontrado (específico):', precio ? precio.id : 'No encontrado');
+
         // Si no hay precio específico, buscar precio global (sucursal_id = NULL)
         if (!precio) {
+            console.log('🔍 Buscando precio global (sucursal_id = NULL)...');
+            
             precio = await Precio.findOne({
                 where: {
-                    producto_presentacion_id,
+                    producto_presentacion_id: ppId,  // ✅ Usar el número convertido
                     sucursal_id: null,
                     activo: true,
                     vigente_desde: { [Op.lte]: new Date() },
@@ -142,21 +185,40 @@ const getPrecioVigenteProducto = async (req, res, next) => {
                     ]
                 },
                 include: [
-                    { model: ProductoPresentacion, as: 'productoPresentacion' }
+                    {
+                        model: ProductoPresentacion,
+                        as: 'productoPresentacion',
+                        include: [  // ✅ AGREGAR INCLUDES FALTANTES
+                            {
+                                model: Producto,
+                                as: 'producto',
+                                include: [
+                                    { model: Categoria, as: 'categoria' },
+                                    { model: Marca, as: 'marca' }
+                                ]
+                            },
+                            {
+                                model: Presentacion,
+                                as: 'presentacion'
+                            }
+                        ]
+                    }
                 ],
                 order: [['vigente_desde', 'DESC']]
             });
+
+            console.log('✅ Precio encontrado (global):', precio ? precio.id : 'No encontrado');
         }
 
         if (!precio) {
             return res.status(404).json({
                 success: false,
-                message: 'No se encontró precio vigente para este producto'
+                message: `No se encontró precio vigente para producto_presentacion_id=${ppId} en sucursal_id=${sucId}`
             });
         }
 
         // Calcular precio final con descuento
-        const precio_final = precio.precio_venta * (1 - precio.descuento_pct / 100);
+        const precio_final = parseFloat(precio.precio_venta) * (1 - parseFloat(precio.descuento_pct) / 100);
 
         res.status(200).json({
             success: true,
@@ -165,8 +227,9 @@ const getPrecioVigenteProducto = async (req, res, next) => {
                 precio_final: parseFloat(precio_final.toFixed(2))
             }
         });
+
     } catch (error) {
-        console.error('Error en getPrecioVigenteProducto:', error);
+        console.error('❌ Error en getPrecioVigenteProducto:', error);
         next(error);
     }
 };

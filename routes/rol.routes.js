@@ -19,3 +19,4 @@ router.put('/roles/:id', rolController.updateRol);
 router.delete('/roles/:id', rolController.deleteRol);
 
 module.exports = router;
+
