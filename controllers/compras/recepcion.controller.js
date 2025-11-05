@@ -187,8 +187,7 @@ const createRecepcion = async (req, res, next) => {
                     sucursal_id: orden.sucursal_id,
                     producto_presentacion_id: detalleOrden.producto_presentacion_id,
                     existencia: cantidad_recibida,
-                    stock_minimo: 0,
-                    stock_maximo: 1000
+                    minimo: 0
                 }, { transaction });
             }
 

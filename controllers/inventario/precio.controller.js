@@ -237,13 +237,14 @@ const getPrecioVigenteProducto = async (req, res, next) => {
 // Crear nuevo precio
 const createPrecio = async (req, res, next) => {
     try {
-        const { 
-            producto_presentacion_id, 
-            sucursal_id, 
-            precio_venta, 
-            descuento_pct, 
-            vigente_desde, 
-            vigente_hasta 
+        const {
+            producto_presentacion_id,
+            sucursal_id,
+            precio_venta,
+            descuento_pct,
+            stock_minimo,
+            vigente_desde,
+            vigente_hasta
         } = req.body;
 
         // Validaciones
@@ -294,6 +295,7 @@ const createPrecio = async (req, res, next) => {
             sucursal_id: sucursal_id || null,
             precio_venta,
             descuento_pct: descuento_pct || 0,
+            stock_minimo: stock_minimo || 0,
             vigente_desde: vigente_desde || new Date(),
             vigente_hasta: vigente_hasta || null,
             activo: true
@@ -329,7 +331,7 @@ const createPrecio = async (req, res, next) => {
 const updatePrecio = async (req, res, next) => {
     try {
         const { id } = req.params;
-        const { precio_venta, descuento_pct, vigente_hasta, activo } = req.body;
+        const { precio_venta, descuento_pct, stock_minimo, vigente_hasta, activo } = req.body;
 
         const precio = await Precio.findByPk(id);
 
@@ -359,6 +361,7 @@ const updatePrecio = async (req, res, next) => {
         await precio.update({
             precio_venta: precio_venta !== undefined ? precio_venta : precio.precio_venta,
             descuento_pct: descuento_pct !== undefined ? descuento_pct : precio.descuento_pct,
+            stock_minimo: stock_minimo !== undefined ? stock_minimo : precio.stock_minimo,
             vigente_hasta: vigente_hasta !== undefined ? vigente_hasta : precio.vigente_hasta,
             activo: activo !== undefined ? activo : precio.activo
         });

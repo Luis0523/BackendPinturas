@@ -40,6 +40,14 @@ const Precio = db.define('Precio', {
             max: 100
         }
     },
+    stock_minimo: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        defaultValue: 0,
+        validate: {
+            min: 0
+        }
+    },
     vigente_desde: {
         type: DataTypes.DATE,
         allowNull: false,

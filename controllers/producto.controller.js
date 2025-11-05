@@ -2,17 +2,26 @@ const { Producto, Categoria, Marca } = require('../models/index');
 
 exports.getProductos = async (req, res, next) => {
     try {
+        const { incluir_inactivos } = req.query;
+
+        // Por defecto, solo mostrar productos activos
+        const where = {};
+        if (incluir_inactivos !== 'true') {
+            where.activo = true;
+        }
+
         const productos = await Producto.findAll({
+            where,
             include: [
-                { 
-                    model: Categoria, 
+                {
+                    model: Categoria,
                     as: 'categoria',  // Importante: usar el alias definido
-                    attributes: ['id', 'nombre'] 
+                    attributes: ['id', 'nombre']
                 },
-                { 
-                    model: Marca, 
+                {
+                    model: Marca,
                     as: 'marca',  // Importante: usar el alias definido
-                    attributes: ['id', 'nombre', 'activa'] 
+                    attributes: ['id', 'nombre', 'activa']
                 }
             ]
         });
@@ -118,6 +127,8 @@ exports.updateProducto = async (req, res, next) => {
 exports.deleteProducto = async (req, res, next) => {
     try {
         const { id } = req.params;
+        const { ProductoPresentacion } = require('../models/index');
+
         const producto = await Producto.findByPk(id);
 
         if (!producto) {
@@ -127,14 +138,55 @@ exports.deleteProducto = async (req, res, next) => {
             });
         }
 
-        await producto.destroy();
+        // Soft delete: marcar como inactivo en lugar de eliminar
+        // También desactivar todas las presentaciones del producto
+        await producto.update({ activo: false });
+
+        // Desactivar todas las presentaciones asociadas
+        await ProductoPresentacion.update(
+            { activo: false },
+            { where: { producto_id: id } }
+        );
 
         res.status(200).json({
             success: true,
-            message: 'Producto eliminado'
+            message: 'Producto desactivado exitosamente'
         });
     } catch (error) {
         console.error('Error en deleteProducto:', error);
+        next(error);
+    }
+};
+
+exports.reactivarProducto = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const { ProductoPresentacion } = require('../models/index');
+
+        const producto = await Producto.findByPk(id);
+
+        if (!producto) {
+            return res.status(404).json({
+                success: false,
+                message: 'Producto no encontrado'
+            });
+        }
+
+        // Reactivar el producto
+        await producto.update({ activo: true });
+
+        // Reactivar todas las presentaciones asociadas
+        await ProductoPresentacion.update(
+            { activo: true },
+            { where: { producto_id: id } }
+        );
+
+        res.status(200).json({
+            success: true,
+            message: 'Producto reactivado exitosamente'
+        });
+    } catch (error) {
+        console.error('Error en reactivarProducto:', error);
         next(error);
     }
 };

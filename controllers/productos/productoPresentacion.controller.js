@@ -49,6 +49,7 @@ exports.getCatalogoVendible = async (req, res, next) => {
 exports.getPresentacionesDeProducto = async (req, res, next) => {
     try {
         const { producto_id } = req.params;
+        const { incluir_inactivos } = req.query;
 
         // Verificar que el producto existe
         const producto = await Producto.findByPk(producto_id, {
@@ -65,8 +66,14 @@ exports.getPresentacionesDeProducto = async (req, res, next) => {
             });
         }
 
+        // Por defecto, solo mostrar presentaciones activas
+        const where = { producto_id };
+        if (incluir_inactivos !== 'true') {
+            where.activo = true;
+        }
+
         const presentaciones = await ProductoPresentacion.findAll({
-            where: { producto_id },
+            where,
             include: [
                 {
                     model: Presentacion,
@@ -320,7 +327,7 @@ exports.reactivarProductoPresentacion = async (req, res, next) => {
     }
 };
 
-// Eliminar combinación (hard delete - usar con cuidado)
+// Eliminar combinación (soft delete)
 exports.deleteProductoPresentacion = async (req, res, next) => {
     try {
         const { id } = req.params;
@@ -334,9 +341,9 @@ exports.deleteProductoPresentacion = async (req, res, next) => {
             });
         }
 
-        // TODO: Verificar que no haya inventario, precios o ventas asociados
-        
-        await productoPresentacion.destroy();
+        // Soft delete: marcar como inactivo en lugar de eliminar
+        // Esto preserva el historial de ventas, compras, inventario y precios
+        await productoPresentacion.update({ activo: false });
 
         res.status(200).json({
             success: true,
