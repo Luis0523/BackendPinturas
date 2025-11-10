@@ -1,0 +1,24 @@
+
+> cliente-servidor@1.0.0 start
+> nodemon app.js
+
+[33m[nodemon] 3.1.10[39m
+[33m[nodemon] to restart at any time, enter `rs`[39m
+[33m[nodemon] watching path(s): *.*[39m
+[33m[nodemon] watching extensions: js,mjs,cjs,json[39m
+[32m[nodemon] starting `node app.js`[39m
+[dotenv@17.2.3] injecting env (6) from .env -- tip: ⚙️  load multiple .env files with { path: ['.env.local', '.env'] }
+🚀 Servidor corriendo en http://localhost:5000
+✅ Base de datos conectada
+🌐 CORS habilitado para: [
+  'http://localhost:5500',
+  'http://127.0.0.1:5500',
+  'http://localhost:3000',
+  'http://127.0.0.1:3000'
+]
+HOLA, ENTRE AL CONTROLADOR
+AQUI, FUI LLAMADO
+🔍 Buscando precio para: { producto_presentacion_id: 1, sucursal_id: 3 }
+✅ Precio encontrado (específico): No encontrado
+🔍 Buscando precio global (sucursal_id = NULL)...
+✅ Precio encontrado (global): No encontrado

@@ -90,8 +90,7 @@ exports.login = async (req, res, next) => {
             nombre: usuario.nombre,
             email: usuario.email,
             dpi: usuario.dpi,
-            //rol: usuario.rol ? usuario.rol.nombre : null,          // ✅ Nombre del rol
-            //rol_descripcion: usuario.rol ? usuario.rol.descripcion : null,  // ✅ Descripción
+            rol: usuario.rol ? usuario.rol.nombre : null,          // ✅ Nombre del rol
             rol_id: usuario.rol_id,
             sucursal: usuario.sucursal ? usuario.sucursal.nombre : null,
             sucursal_id: usuario.sucursal_id,

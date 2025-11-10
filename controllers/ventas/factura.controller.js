@@ -1,17 +1,19 @@
 // controllers/ventas/factura.controller.js
-const { 
-    Factura, 
-    DetalleFactura, 
-    Pago, 
-    Cliente, 
-    Usuario, 
+const {
+    Factura,
+    DetalleFactura,
+    Pago,
+    Cliente,
+    Usuario,
     Sucursal,
     ProductoPresentacion,
     Producto,
     Presentacion,
     InventarioSucursal,
     MovimientoInventario,
-    Precio
+    Precio,
+    Categoria,
+    Marca
 } = require('../../models/index');
 const db = require('../../db/db');
 const { Op } = require('sequelize');
@@ -61,12 +63,37 @@ const createFactura = async (req, res, next) => {
         } = req.body;
 
         // ========== VALIDACIONES BÁSICAS ==========
-        if (!cliente_id || !usuario_id || !sucursal_id) {
+        if (!usuario_id || !sucursal_id) {
             await transaction.rollback();
             return res.status(400).json({
                 success: false,
-                message: 'cliente_id, usuario_id y sucursal_id son obligatorios'
+                message: 'usuario_id y sucursal_id son obligatorios'
             });
+        }
+
+        // Si no hay cliente_id o es null, buscar/crear "Consumidor Final"
+        let clienteIdFinal = cliente_id;
+        if (!cliente_id || cliente_id === null) {
+            const clienteCF = await Cliente.findOne({
+                where: { nit: 'CF' }
+            });
+
+            if (!clienteCF) {
+                // Crear cliente CF si no existe
+                const nuevoClienteCF = await Cliente.create({
+                    nombre: 'CONSUMIDOR FINAL',
+                    nit: 'CF',
+                    email: null,
+                    telefono: null,
+                    direccion: null,
+                    activo: true
+                }, { transaction });
+                clienteIdFinal = nuevoClienteCF.id;
+                console.log('✅ Cliente CF creado automáticamente:', nuevoClienteCF.id);
+            } else {
+                clienteIdFinal = clienteCF.id;
+                console.log('✅ Cliente CF encontrado:', clienteCF.id);
+            }
         }
 
         if (!items || !Array.isArray(items) || items.length === 0) {
@@ -86,7 +113,7 @@ const createFactura = async (req, res, next) => {
         }
 
         // ========== VERIFICAR ENTIDADES ==========
-        const cliente = await Cliente.findByPk(cliente_id);
+        const cliente = await Cliente.findByPk(clienteIdFinal);
         if (!cliente) {
             await transaction.rollback();
             return res.status(404).json({
@@ -221,7 +248,7 @@ const createFactura = async (req, res, next) => {
         const factura = await Factura.create({
             numero,
             serie,
-            cliente_id,
+            cliente_id: clienteIdFinal,
             usuario_id,
             sucursal_id,
             subtotal,
