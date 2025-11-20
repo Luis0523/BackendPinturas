@@ -1,46 +1,49 @@
 
 const {
-    Factura,
-    DetalleFactura,
+    Pedido,
+    DetallePedido,
     Pago,
     Cliente,
-    Usuario,
     Sucursal,
     ProductoPresentacion,
     Producto,
     Presentacion,
     InventarioSucursal,
     MovimientoInventario,
-    Precio,
-    Categoria,
-    Marca
+    Factura,
+    DetalleFactura
 } = require('../../models/index');
 const db = require('../../db/db');
 const { Op } = require('sequelize');
+const { enviarEmailConfirmacionPedido, enviarEmailNotificacionAdmin } = require('../../services/email.service');
 
 
-const obtenerSiguienteNumero = async (serie, transaction) => {
+const obtenerSiguienteNumeroPedido = async (transaction) => {
     
     const [secuencia] = await db.query(
-        'SELECT ultimo_numero FROM secuencias_facturas WHERE serie = ? FOR UPDATE',
+        'SELECT ultimo_numero FROM secuencias_pedidos FOR UPDATE',
         {
-            replacements: [serie],
             type: db.QueryTypes.SELECT,
             transaction
         }
     );
 
     if (!secuencia) {
-        throw new Error(`Serie ${serie} no existe`);
+        
+        await db.query(
+            'INSERT INTO secuencias_pedidos (ultimo_numero) VALUES (0)',
+            { transaction }
+        );
+        return 1;
     }
 
     const nuevoNumero = secuencia.ultimo_numero + 1;
 
     
     await db.query(
-        'UPDATE secuencias_facturas SET ultimo_numero = ? WHERE serie = ?',
+        'UPDATE secuencias_pedidos SET ultimo_numero = ?',
         {
-            replacements: [nuevoNumero, serie],
+            replacements: [nuevoNumero],
             transaction
         }
     );
@@ -49,51 +52,68 @@ const obtenerSiguienteNumero = async (serie, transaction) => {
 };
 
 
-const createFactura = async (req, res, next) => {
+const validarMetodosPagoOnline = (pagos) => {
+    const metodosPermitidos = ['TARJETA_DEBITO', 'TARJETA_CREDITO', 'TRANSFERENCIA', 'DEPOSITO'];
+
+    for (const pago of pagos) {
+        if (!metodosPermitidos.includes(pago.tipo)) {
+            return {
+                valido: false,
+                mensaje: `Método de pago ${pago.tipo} no permitido para pedidos en línea. Solo se acepta: ${metodosPermitidos.join(', ')}`
+            };
+        }
+    }
+
+    return { valido: true };
+};
+
+
+const createPedido = async (req, res, next) => {
     const transaction = await db.transaction();
-    
+
     try {
-        const { 
-            cliente_id, 
-            usuario_id, 
-            sucursal_id, 
-            serie = 'A',
+        const {
+            
+            nombre_cliente,
+            email_cliente,
+            telefono_cliente,
+            nit_cliente = 'CF',
+            
+            direccion_envio,
+            ciudad_envio,
+            departamento_envio,
+            codigo_postal,
+            referencias_direccion,
+            
+            sucursal_id,
             items,  
-            pagos   
+            pagos,  
+            notas_cliente
         } = req.body;
 
         
-        if (!usuario_id || !sucursal_id) {
+        if (!nombre_cliente || !email_cliente || !telefono_cliente) {
             await transaction.rollback();
             return res.status(400).json({
                 success: false,
-                message: 'usuario_id y sucursal_id son obligatorios'
+                message: 'Nombre, email y teléfono son obligatorios'
             });
         }
 
-        
-        let clienteIdFinal = cliente_id;
-        if (!cliente_id || cliente_id === null) {
-            const clienteCF = await Cliente.findOne({
-                where: { nit: 'CF' }
+        if (!direccion_envio || !ciudad_envio || !departamento_envio) {
+            await transaction.rollback();
+            return res.status(400).json({
+                success: false,
+                message: 'Dirección completa de envío es obligatoria'
             });
+        }
 
-            if (!clienteCF) {
-                
-                const nuevoClienteCF = await Cliente.create({
-                    nombre: 'CONSUMIDOR FINAL',
-                    nit: 'CF',
-                    email: null,
-                    telefono: null,
-                    direccion: null,
-                    activo: true
-                }, { transaction });
-                clienteIdFinal = nuevoClienteCF.id;
-                console.log('✅ Cliente CF creado automáticamente:', nuevoClienteCF.id);
-            } else {
-                clienteIdFinal = clienteCF.id;
-                console.log('✅ Cliente CF encontrado:', clienteCF.id);
-            }
+        if (!sucursal_id) {
+            await transaction.rollback();
+            return res.status(400).json({
+                success: false,
+                message: 'sucursal_id es obligatorio'
+            });
         }
 
         if (!items || !Array.isArray(items) || items.length === 0) {
@@ -113,24 +133,16 @@ const createFactura = async (req, res, next) => {
         }
 
         
-        const cliente = await Cliente.findByPk(clienteIdFinal);
-        if (!cliente) {
+        const validacionPago = validarMetodosPagoOnline(pagos);
+        if (!validacionPago.valido) {
             await transaction.rollback();
-            return res.status(404).json({
+            return res.status(400).json({
                 success: false,
-                message: 'Cliente no encontrado'
+                message: validacionPago.mensaje
             });
         }
 
-        const usuario = await Usuario.findByPk(usuario_id);
-        if (!usuario) {
-            await transaction.rollback();
-            return res.status(404).json({
-                success: false,
-                message: 'Usuario no encontrado'
-            });
-        }
-
+        
         const sucursal = await Sucursal.findByPk(sucursal_id);
         if (!sucursal || !sucursal.activa) {
             await transaction.rollback();
@@ -138,6 +150,16 @@ const createFactura = async (req, res, next) => {
                 success: false,
                 message: 'Sucursal no encontrada o inactiva'
             });
+        }
+
+        
+        let cliente = await Cliente.findOne({
+            where: { email: email_cliente }
+        });
+
+        let cliente_id = null;
+        if (cliente) {
+            cliente_id = cliente.id;
         }
 
         
@@ -242,26 +264,35 @@ const createFactura = async (req, res, next) => {
         }
 
         
-        const numero = await obtenerSiguienteNumero(serie, transaction);
+        const numero = await obtenerSiguienteNumeroPedido(transaction);
 
         
-        const factura = await Factura.create({
+        const pedido = await Pedido.create({
             numero,
-            serie,
-            cliente_id: clienteIdFinal,
-            usuario_id,
+            cliente_id,
+            nombre_cliente: nombre_cliente.trim(),
+            email_cliente: email_cliente.trim().toLowerCase(),
+            telefono_cliente: telefono_cliente.trim(),
+            nit_cliente: nit_cliente.trim().toUpperCase(),
+            direccion_envio: direccion_envio.trim(),
+            ciudad_envio: ciudad_envio.trim(),
+            departamento_envio: departamento_envio.trim(),
+            codigo_postal: codigo_postal?.trim() || null,
+            referencias_direccion: referencias_direccion?.trim() || null,
             sucursal_id,
             subtotal,
             descuento_total,
             total,
-            estado: 'EMITIDA'
+            estado: 'PENDIENTE',
+            estado_pago: 'PENDIENTE',
+            notas_cliente: notas_cliente?.trim() || null
         }, { transaction });
 
         
         for (const detalle of detallesParaCrear) {
             
-            await DetalleFactura.create({
-                factura_id: factura.id,
+            await DetallePedido.create({
+                pedido_id: pedido.id,
                 producto_presentacion_id: detalle.producto_presentacion_id,
                 cantidad: detalle.cantidad,
                 precio_unitario: detalle.precio_unitario,
@@ -280,14 +311,14 @@ const createFactura = async (req, res, next) => {
                 producto_presentacion_id: detalle.producto_presentacion_id,
                 tipo: 'VENTA',
                 cantidad: -detalle.cantidad,
-                referencia: `Factura ${serie}-${numero}`
+                referencia: `Pedido Web #${numero}`
             }, { transaction });
         }
 
         
         for (const pago of pagos) {
             await Pago.create({
-                factura_id: factura.id,
+                pedido_id: pedido.id,
                 tipo: pago.tipo,
                 monto: pago.monto,
                 referencia: pago.referencia || null,
@@ -301,7 +332,7 @@ const createFactura = async (req, res, next) => {
         await transaction.commit();
 
         
-        const facturaCompleta = await Factura.findByPk(factura.id, {
+        const pedidoCompleto = await Pedido.findByPk(pedido.id, {
             include: [
                 {
                     model: Cliente,
@@ -309,17 +340,12 @@ const createFactura = async (req, res, next) => {
                     attributes: ['id', 'nombre', 'nit', 'email']
                 },
                 {
-                    model: Usuario,
-                    as: 'usuario',
-                    attributes: ['id', 'nombre', 'email']
-                },
-                {
                     model: Sucursal,
                     as: 'sucursal',
                     attributes: ['id', 'nombre', 'direccion']
                 },
                 {
-                    model: DetalleFactura,
+                    model: DetallePedido,
                     as: 'detalles',
                     include: [
                         {
@@ -339,28 +365,56 @@ const createFactura = async (req, res, next) => {
             ]
         });
 
+        
+        
+        
+        enviarEmailConfirmacionPedido(pedidoCompleto.toJSON())
+            .then(result => {
+                if (result.success) {
+                    console.log(`✅ Email de confirmación enviado a ${pedidoCompleto.email_cliente}`);
+                } else {
+                    console.warn(`⚠️ No se pudo enviar email de confirmación: ${result.message}`);
+                }
+            })
+            .catch(error => {
+                console.error('❌ Error al enviar email de confirmación:', error.message);
+            });
+
+        
+        enviarEmailNotificacionAdmin(pedidoCompleto.toJSON())
+            .then(result => {
+                if (result.success) {
+                    console.log('✅ Notificación admin enviada');
+                } else {
+                    console.warn(`⚠️ No se pudo enviar notificación admin: ${result.message}`);
+                }
+            })
+            .catch(error => {
+                console.error('❌ Error al enviar notificación admin:', error.message);
+            });
+
         res.status(201).json({
             success: true,
-            message: `Factura ${serie}-${numero} creada exitosamente`,
-            data: facturaCompleta
+            message: `Pedido #${numero} creado exitosamente`,
+            data: pedidoCompleto
         });
 
     } catch (error) {
         await transaction.rollback();
-        console.error('Error en createFactura:', error);
+        console.error('Error en createPedido:', error);
         next(error);
     }
 };
 
 
-const getFacturas = async (req, res, next) => {
+const getPedidos = async (req, res, next) => {
     try {
-        const { 
-            sucursal_id, 
-            cliente_id, 
-            usuario_id, 
-            estado, 
-            desde, 
+        const {
+            sucursal_id,
+            email,
+            estado,
+            estado_pago,
+            desde,
             hasta,
             limite = 50
         } = req.query;
@@ -368,24 +422,24 @@ const getFacturas = async (req, res, next) => {
         const where = {};
 
         if (sucursal_id) where.sucursal_id = sucursal_id;
-        if (cliente_id) where.cliente_id = cliente_id;
-        if (usuario_id) where.usuario_id = usuario_id;
+        if (email) where.email_cliente = { [Op.like]: `%${email}%` };
         if (estado) where.estado = estado;
+        if (estado_pago) where.estado_pago = estado_pago;
 
         if (desde) {
-            where.fecha_emision = {
+            where.fecha_pedido = {
                 [Op.gte]: new Date(desde)
             };
         }
 
         if (hasta) {
-            where.fecha_emision = {
-                ...where.fecha_emision,
+            where.fecha_pedido = {
+                ...where.fecha_pedido,
                 [Op.lte]: new Date(hasta)
             };
         }
 
-        const facturas = await Factura.findAll({
+        const pedidos = await Pedido.findAll({
             where,
             include: [
                 {
@@ -394,67 +448,50 @@ const getFacturas = async (req, res, next) => {
                     attributes: ['id', 'nombre', 'nit']
                 },
                 {
-                    model: Usuario,
-                    as: 'usuario',
-                    attributes: ['id', 'nombre']
-                },
-                {
                     model: Sucursal,
                     as: 'sucursal',
                     attributes: ['id', 'nombre']
                 }
             ],
-            order: [['fecha_emision', 'DESC']],
+            order: [['fecha_pedido', 'DESC']],
             limit: parseInt(limite)
         });
 
         res.status(200).json({
             success: true,
-            count: facturas.length,
-            data: facturas
+            count: pedidos.length,
+            data: pedidos
         });
     } catch (error) {
-        console.error('Error en getFacturas:', error);
+        console.error('Error en getPedidos:', error);
         next(error);
     }
 };
 
 
-const getFacturaById = async (req, res, next) => {
+const getPedidoById = async (req, res, next) => {
     try {
         const { id } = req.params;
 
-        const factura = await Factura.findByPk(id, {
+        const pedido = await Pedido.findByPk(id, {
             include: [
                 {
                     model: Cliente,
                     as: 'cliente'
                 },
                 {
-                    model: Usuario,
-                    as: 'usuario',
-                    attributes: ['id', 'nombre', 'email']
-                },
-                {
                     model: Sucursal,
                     as: 'sucursal'
                 },
                 {
-                    model: DetalleFactura,
+                    model: DetallePedido,
                     as: 'detalles',
                     include: [
                         {
                             model: ProductoPresentacion,
                             as: 'productoPresentacion',
                             include: [
-                                { 
-                                    model: Producto, 
-                                    as: 'producto',
-                                    include: [
-                                        { model: Categoria, as: 'categoria' },
-                                        { model: Marca, as: 'marca' }
-                                    ]
-                                },
+                                { model: Producto, as: 'producto' },
                                 { model: Presentacion, as: 'presentacion' }
                             ]
                         }
@@ -465,140 +502,131 @@ const getFacturaById = async (req, res, next) => {
                     as: 'pagos'
                 },
                 {
-                    model: Usuario,
-                    as: 'anulador',
-                    attributes: ['id', 'nombre']
+                    model: Factura,
+                    as: 'factura',
+                    attributes: ['id', 'numero', 'serie', 'fecha_emision']
                 }
             ]
         });
 
-        if (!factura) {
+        if (!pedido) {
             return res.status(404).json({
                 success: false,
-                message: 'Factura no encontrada'
+                message: 'Pedido no encontrado'
             });
         }
 
         res.status(200).json({
             success: true,
-            data: factura
+            data: pedido
         });
     } catch (error) {
-        console.error('Error en getFacturaById:', error);
+        console.error('Error en getPedidoById:', error);
         next(error);
     }
 };
 
 
-const getPagosFactura = async (req, res, next) => {
+const actualizarEstadoPedido = async (req, res, next) => {
     try {
         const { id } = req.params;
+        const { estado, notas_internas } = req.body;
 
-        const factura = await Factura.findByPk(id, {
-            attributes: ['id', 'numero', 'serie', 'total']
-        });
+        const estadosPermitidos = ['PENDIENTE', 'CONFIRMADO', 'EN_PREPARACION', 'ENVIADO', 'ENTREGADO', 'CANCELADO'];
 
-        if (!factura) {
-            return res.status(404).json({
+        if (!estado || !estadosPermitidos.includes(estado)) {
+            return res.status(400).json({
                 success: false,
-                message: 'Factura no encontrada'
+                message: `Estado inválido. Estados permitidos: ${estadosPermitidos.join(', ')}`
             });
         }
 
-        const pagos = await Pago.findAll({
-            where: { factura_id: id },
-            order: [['created_at', 'ASC']]
-        });
+        const pedido = await Pedido.findByPk(id);
+        if (!pedido) {
+            return res.status(404).json({
+                success: false,
+                message: 'Pedido no encontrado'
+            });
+        }
 
-        const total_pagado = pagos.reduce((sum, pago) => sum + parseFloat(pago.monto), 0);
+        const actualizacion = { estado };
+
+        if (notas_internas) {
+            actualizacion.notas_internas = notas_internas;
+        }
+
+        if (estado === 'CANCELADO') {
+            actualizacion.cancelado_fecha = new Date();
+            actualizacion.motivo_cancelacion = notas_internas || 'Cancelado';
+        }
+
+        await pedido.update(actualizacion);
 
         res.status(200).json({
             success: true,
-            factura: {
-                numero: factura.numero,
-                serie: factura.serie,
-                total: parseFloat(factura.total)
-            },
-            pagos,
-            total_pagado: parseFloat(total_pagado.toFixed(2))
+            message: `Pedido actualizado a estado: ${estado}`,
+            data: pedido
         });
     } catch (error) {
-        console.error('Error en getPagosFactura:', error);
+        console.error('Error en actualizarEstadoPedido:', error);
         next(error);
     }
 };
 
 
-const anularFactura = async (req, res, next) => {
+const cancelarPedido = async (req, res, next) => {
     const transaction = await db.transaction();
-    
+
     try {
         const { id } = req.params;
-        const { usuario_id, motivo_anulacion } = req.body;
+        const { motivo_cancelacion } = req.body;
 
-        
-        if (!usuario_id) {
+        if (!motivo_cancelacion || motivo_cancelacion.trim() === '') {
             await transaction.rollback();
             return res.status(400).json({
                 success: false,
-                message: 'usuario_id es obligatorio (quien anula)'
+                message: 'motivo_cancelacion es obligatorio'
             });
         }
 
-        if (!motivo_anulacion || motivo_anulacion.trim() === '') {
-            await transaction.rollback();
-            return res.status(400).json({
-                success: false,
-                message: 'motivo_anulacion es obligatorio'
-            });
-        }
-
-        
-        const factura = await Factura.findByPk(id, {
+        const pedido = await Pedido.findByPk(id, {
             include: [
                 {
-                    model: DetalleFactura,
+                    model: DetallePedido,
                     as: 'detalles'
                 }
             ]
         });
 
-        if (!factura) {
+        if (!pedido) {
             await transaction.rollback();
             return res.status(404).json({
                 success: false,
-                message: 'Factura no encontrada'
+                message: 'Pedido no encontrado'
             });
         }
 
-        
-        if (factura.estado === 'ANULADA') {
+        if (pedido.estado === 'CANCELADO') {
             await transaction.rollback();
             return res.status(400).json({
                 success: false,
-                message: 'La factura ya está anulada',
-                anulada_fecha: factura.anulada_fecha,
-                anulada_por: factura.anulada_por,
-                motivo: factura.motivo_anulacion
+                message: 'El pedido ya está cancelado'
             });
         }
 
-        
-        const usuario = await Usuario.findByPk(usuario_id);
-        if (!usuario) {
+        if (pedido.estado === 'ENTREGADO') {
             await transaction.rollback();
-            return res.status(404).json({
+            return res.status(400).json({
                 success: false,
-                message: 'Usuario no encontrado'
+                message: 'No se puede cancelar un pedido ya entregado'
             });
         }
 
         
-        for (const detalle of factura.detalles) {
-            
+        for (const detalle of pedido.detalles) {
             const inventario = await InventarioSucursal.findOne({
                 where: {
-                    sucursal_id: factura.sucursal_id,
+                    sucursal_id: pedido.sucursal_id,
                     producto_presentacion_id: detalle.producto_presentacion_id
                 }
             });
@@ -611,93 +639,44 @@ const anularFactura = async (req, res, next) => {
                 });
             }
 
-            
             await inventario.update({
                 existencia: inventario.existencia + detalle.cantidad
             }, { transaction });
 
-            
             await MovimientoInventario.create({
-                sucursal_id: factura.sucursal_id,
+                sucursal_id: pedido.sucursal_id,
                 producto_presentacion_id: detalle.producto_presentacion_id,
                 tipo: 'AJUSTE',
-                cantidad: detalle.cantidad, 
-                referencia: `Anulación Factura ${factura.serie}-${factura.numero}`
+                cantidad: detalle.cantidad,
+                referencia: `Cancelación Pedido Web #${pedido.numero}`
             }, { transaction });
         }
 
-        
-        await factura.update({
-            estado: 'ANULADA',
-            anulada_por: usuario_id,
-            anulada_fecha: new Date(),
-            motivo_anulacion: motivo_anulacion.trim()
+        await pedido.update({
+            estado: 'CANCELADO',
+            cancelado_fecha: new Date(),
+            motivo_cancelacion: motivo_cancelacion.trim()
         }, { transaction });
 
-        
         await transaction.commit();
-
-        
-        const facturaAnulada = await Factura.findByPk(id, {
-            include: [
-                {
-                    model: Cliente,
-                    as: 'cliente',
-                    attributes: ['id', 'nombre', 'nit']
-                },
-                {
-                    model: Usuario,
-                    as: 'usuario',
-                    attributes: ['id', 'nombre']
-                },
-                {
-                    model: Usuario,
-                    as: 'anulador',
-                    attributes: ['id', 'nombre', 'email']
-                },
-                {
-                    model: Sucursal,
-                    as: 'sucursal',
-                    attributes: ['id', 'nombre']
-                },
-                {
-                    model: DetalleFactura,
-                    as: 'detalles',
-                    include: [
-                        {
-                            model: ProductoPresentacion,
-                            as: 'productoPresentacion',
-                            include: [
-                                { model: Producto, as: 'producto' },
-                                { model: Presentacion, as: 'presentacion' }
-                            ]
-                        }
-                    ]
-                },
-                {
-                    model: Pago,
-                    as: 'pagos'
-                }
-            ]
-        });
 
         res.status(200).json({
             success: true,
-            message: `Factura ${factura.serie}-${factura.numero} anulada exitosamente`,
-            data: facturaAnulada
+            message: `Pedido #${pedido.numero} cancelado exitosamente`,
+            data: pedido
         });
 
     } catch (error) {
         await transaction.rollback();
-        console.error('Error en anularFactura:', error);
+        console.error('Error en cancelarPedido:', error);
         next(error);
     }
 };
 
 module.exports = {
-    createFactura,
-    getFacturas,
-    getFacturaById,
-    getPagosFactura,
-    anularFactura
+    createPedido,
+    getPedidos,
+    getPedidoById,
+    actualizarEstadoPedido,
+    cancelarPedido
 };

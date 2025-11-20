@@ -1,14 +1,14 @@
 const express = require('express');
 const router = express.Router();
 
-// ===== IMPORTAR CONTROLLERS =====
-
-const marcaController = require('../controllers/core/marca.controller'); // ✅ NUEVO
 
 
-// =============================================
-// RUTAS DE MARCAS
-// =============================================
+const marcaController = require('../controllers/core/marca.controller'); 
+
+
+
+
+
 router.post('/marcas', marcaController.createMarca);
 router.get('/marcas', marcaController.getMarcas);
 router.get('/marcas/:id', marcaController.getMarcaById);

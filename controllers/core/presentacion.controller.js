@@ -1,7 +1,7 @@
-// controllers/core/presentacion.controller.js
+
 const { Presentacion } = require('../../models/index');
 
-// Obtener todas las presentaciones activas
+
 exports.getPresentaciones = async (req, res, next) => {
     try {
         const presentaciones = await Presentacion.findAll({
@@ -20,7 +20,7 @@ exports.getPresentaciones = async (req, res, next) => {
     }
 };
 
-// Obtener todas (incluyendo inactivas)
+
 exports.getAllPresentaciones = async (req, res, next) => {
     try {
         const presentaciones = await Presentacion.findAll({
@@ -38,7 +38,7 @@ exports.getAllPresentaciones = async (req, res, next) => {
     }
 };
 
-// Obtener presentación por ID
+
 exports.getPresentacionById = async (req, res, next) => {
     try {
         const { id } = req.params;
@@ -62,12 +62,12 @@ exports.getPresentacionById = async (req, res, next) => {
     }
 };
 
-// Crear nueva presentación
+
 exports.createPresentacion = async (req, res, next) => {
     try {
         const { nombre, unidad_base, factor_galon, activo } = req.body;
 
-        // Validación básica
+        
         if (!nombre) {
             return res.status(400).json({
                 success: false,
@@ -88,7 +88,7 @@ exports.createPresentacion = async (req, res, next) => {
             data: presentacion
         });
     } catch (error) {
-        // Error de duplicado (nombre único)
+        
         if (error.name === 'SequelizeUniqueConstraintError') {
             return res.status(400).json({
                 success: false,
@@ -100,7 +100,7 @@ exports.createPresentacion = async (req, res, next) => {
     }
 };
 
-// Actualizar presentación
+
 exports.updatePresentacion = async (req, res, next) => {
     try {
         const { id } = req.params;
@@ -139,7 +139,7 @@ exports.updatePresentacion = async (req, res, next) => {
     }
 };
 
-// Eliminar (soft delete - marcar como inactivo)
+
 exports.deletePresentacion = async (req, res, next) => {
     try {
         const { id } = req.params;
@@ -153,7 +153,7 @@ exports.deletePresentacion = async (req, res, next) => {
             });
         }
 
-        // Soft delete: solo marcar como inactivo
+        
         await presentacion.update({ activo: false });
 
         res.status(200).json({
@@ -166,7 +166,7 @@ exports.deletePresentacion = async (req, res, next) => {
     }
 };
 
-// Reactivar presentación
+
 exports.reactivarPresentacion = async (req, res, next) => {
     try {
         const { id } = req.params;

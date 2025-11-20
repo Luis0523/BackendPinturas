@@ -1,15 +1,15 @@
-// controllers/inventario/inventario.controller.js
+
 const { InventarioSucursal, ProductoPresentacion, Producto, Presentacion, Sucursal, Categoria, Marca, MovimientoInventario, Precio } = require('../../models/index');
 const { Op } = require('sequelize');
 const db = require('../../db/db');
 
-// Obtener inventario completo de una sucursal
+
 const getInventarioSucursal = async (req, res, next) => {
     try {
         const { sucursal_id } = req.params;
-        const { alerta } = req.query; // ?alerta=true para solo ver alertas
+        const { alerta } = req.query; 
 
-        // Verificar que la sucursal existe
+        
         const sucursal = await Sucursal.findByPk(sucursal_id);
         if (!sucursal) {
             return res.status(404).json({
@@ -20,7 +20,7 @@ const getInventarioSucursal = async (req, res, next) => {
 
         const where = { sucursal_id };
 
-        // Si solo quiere alertas
+        
         if (alerta === 'true') {
             where.existencia = {
                 [Op.lt]: db.Sequelize.col('minimo')
@@ -53,9 +53,9 @@ const getInventarioSucursal = async (req, res, next) => {
                                 sucursal_id: sucursal_id,
                                 activo: true
                             },
-                            required: false, // No obligatorio (por si no hay precio registrado)
-                            order: [['vigente_desde', 'DESC']], // El más reciente primero
-                            limit: 1 // Solo el precio actual
+                            required: false, 
+                            order: [['vigente_desde', 'DESC']], 
+                            limit: 1 
                         }
                     ]
                 }
@@ -63,7 +63,7 @@ const getInventarioSucursal = async (req, res, next) => {
             order: [[{ model: ProductoPresentacion, as: 'productoPresentacion' }, { model: Producto, as: 'producto' }, 'descripcion', 'ASC']]
         });
 
-        // Calcular estadísticas
+        
         const total_productos = inventario.length;
         const con_stock = inventario.filter(i => i.existencia > 0).length;
         const sin_stock = inventario.filter(i => i.existencia === 0).length;
@@ -93,12 +93,12 @@ const getInventarioSucursal = async (req, res, next) => {
     }
 };
 
-// Obtener stock de un producto en todas las sucursales
+
 const getStockProducto = async (req, res, next) => {
     try {
         const { producto_presentacion_id } = req.params;
 
-        // Verificar que el producto existe
+        
         const productoPresentacion = await ProductoPresentacion.findByPk(producto_presentacion_id, {
             include: [
                 { model: Producto, as: 'producto' },
@@ -148,7 +148,7 @@ const getStockProducto = async (req, res, next) => {
     }
 };
 
-// Obtener todas las alertas de stock bajo
+
 const getAlertasStock = async (req, res, next) => {
     try {
         const { sucursal_id } = req.query;
@@ -200,7 +200,7 @@ const getAlertasStock = async (req, res, next) => {
     }
 };
 
-// Obtener productos agotados
+
 const getProductosAgotados = async (req, res, next) => {
     try {
         const { sucursal_id } = req.query;
@@ -241,12 +241,12 @@ const getProductosAgotados = async (req, res, next) => {
     }
 };
 
-// Crear o actualizar inventario
+
 const upsertInventario = async (req, res, next) => {
     try {
         const { sucursal_id, producto_presentacion_id, existencia, minimo } = req.body;
 
-        // Validaciones
+        
         if (!sucursal_id || !producto_presentacion_id) {
             return res.status(400).json({
                 success: false,
@@ -268,7 +268,7 @@ const upsertInventario = async (req, res, next) => {
             });
         }
 
-        // Verificar que sucursal existe
+        
         const sucursal = await Sucursal.findByPk(sucursal_id);
         if (!sucursal) {
             return res.status(404).json({
@@ -277,7 +277,7 @@ const upsertInventario = async (req, res, next) => {
             });
         }
 
-        // Verificar que producto-presentación existe
+        
         const productoPresentacion = await ProductoPresentacion.findByPk(producto_presentacion_id);
         if (!productoPresentacion) {
             return res.status(404).json({
@@ -286,7 +286,7 @@ const upsertInventario = async (req, res, next) => {
             });
         }
 
-        // Buscar si ya existe
+        
         let inventario = await InventarioSucursal.findOne({
             where: {
                 sucursal_id,
@@ -295,13 +295,13 @@ const upsertInventario = async (req, res, next) => {
         });
 
         if (inventario) {
-            // Actualizar existente
+            
             await inventario.update({
                 existencia,
                 minimo: minimo !== undefined ? minimo : inventario.minimo
             });
         } else {
-            // Crear nuevo
+            
             inventario = await InventarioSucursal.create({
                 sucursal_id,
                 producto_presentacion_id,
@@ -310,7 +310,7 @@ const upsertInventario = async (req, res, next) => {
             });
         }
 
-        // Obtener con relaciones
+        
         const inventarioCompleto = await InventarioSucursal.findByPk(inventario.id, {
             include: [
                 {
@@ -345,15 +345,15 @@ const upsertInventario = async (req, res, next) => {
     }
 };
 
-// Ajustar inventario (sumar o restar)
-// ===== REEMPLAZAR ajustarInventario =====
+
+
 const ajustarInventario = async (req, res, next) => {
-    const transaction = await db.transaction(); // Usar transacción
+    const transaction = await db.transaction(); 
 
     try {
         const { sucursal_id, producto_presentacion_id, cantidad, motivo } = req.body;
 
-        // Validaciones
+        
         if (!sucursal_id || !producto_presentacion_id || cantidad === undefined) {
             await transaction.rollback();
             return res.status(400).json({
@@ -362,7 +362,7 @@ const ajustarInventario = async (req, res, next) => {
             });
         }
 
-        // Buscar inventario
+        
         const inventario = await InventarioSucursal.findOne({
             where: {
                 sucursal_id,
@@ -388,10 +388,10 @@ const ajustarInventario = async (req, res, next) => {
             });
         }
 
-        // 1. Actualizar inventario
+        
         await inventario.update({ existencia: nueva_existencia }, { transaction });
 
-        // 2. Crear movimiento de inventario ⭐ NUEVO
+        
         await MovimientoInventario.create({
             sucursal_id,
             producto_presentacion_id,
@@ -400,10 +400,10 @@ const ajustarInventario = async (req, res, next) => {
             referencia: motivo || 'Ajuste manual'
         }, { transaction });
 
-        // Commit de la transacción
+        
         await transaction.commit();
 
-        // Obtener inventario actualizado
+        
         const inventarioActualizado = await InventarioSucursal.findByPk(inventario.id, {
             include: [
                 {
@@ -427,7 +427,7 @@ const ajustarInventario = async (req, res, next) => {
             motivo: motivo || 'Sin motivo especificado',
             existencia_anterior: inventario.existencia,
             existencia_nueva: nueva_existencia,
-            movimiento_registrado: true, // ⭐ NUEVO
+            movimiento_registrado: true, 
             data: inventarioActualizado
         });
     } catch (error) {
@@ -438,14 +438,14 @@ const ajustarInventario = async (req, res, next) => {
 };
 
 
-// ===== REEMPLAZAR trasladarInventario =====
+
 const trasladarInventario = async (req, res, next) => {
-    const transaction = await db.transaction(); // Usar transacción
+    const transaction = await db.transaction(); 
 
     try {
         const { producto_presentacion_id, sucursal_origen_id, sucursal_destino_id, cantidad } = req.body;
 
-        // Validaciones
+        
         if (!producto_presentacion_id || !sucursal_origen_id || !sucursal_destino_id || !cantidad) {
             await transaction.rollback();
             return res.status(400).json({
@@ -470,7 +470,7 @@ const trasladarInventario = async (req, res, next) => {
             });
         }
 
-        // Buscar inventario origen
+        
         const inventarioOrigen = await InventarioSucursal.findOne({
             where: {
                 sucursal_id: sucursal_origen_id,
@@ -494,7 +494,7 @@ const trasladarInventario = async (req, res, next) => {
             });
         }
 
-        // Buscar o crear inventario destino
+        
         let inventarioDestino = await InventarioSucursal.findOne({
             where: {
                 sucursal_id: sucursal_destino_id,
@@ -511,17 +511,17 @@ const trasladarInventario = async (req, res, next) => {
             }, { transaction });
         }
 
-        // 1. Actualizar inventario origen
+        
         await inventarioOrigen.update({
             existencia: inventarioOrigen.existencia - cantidad
         }, { transaction });
 
-        // 2. Actualizar inventario destino
+        
         await inventarioDestino.update({
             existencia: inventarioDestino.existencia + cantidad
         }, { transaction });
 
-        // 3. Crear movimiento de SALIDA en origen ⭐ NUEVO
+        
         await MovimientoInventario.create({
             sucursal_id: sucursal_origen_id,
             producto_presentacion_id,
@@ -530,7 +530,7 @@ const trasladarInventario = async (req, res, next) => {
             referencia: `Traslado a sucursal ID: ${sucursal_destino_id}`
         }, { transaction });
 
-        // 4. Crear movimiento de ENTRADA en destino ⭐ NUEVO
+        
         await MovimientoInventario.create({
             sucursal_id: sucursal_destino_id,
             producto_presentacion_id,
@@ -539,13 +539,13 @@ const trasladarInventario = async (req, res, next) => {
             referencia: `Traslado desde sucursal ID: ${sucursal_origen_id}`
         }, { transaction });
 
-        // Commit de la transacción
+        
         await transaction.commit();
 
         res.status(200).json({
             success: true,
             message: 'Traslado realizado exitosamente',
-            movimientos_registrados: 2, // ⭐ NUEVO
+            movimientos_registrados: 2, 
             traslado: {
                 cantidad,
                 origen: {

@@ -1,13 +1,13 @@
-// controllers/core/marca.controller.js
+
 const { Marca, Producto } = require('../../models/index');
 const { Op } = require('sequelize');
 
-// ===== CREAR MARCA =====
+
 const createMarca = async (req, res, next) => {
     try {
         const { nombre, activa } = req.body;
 
-        // Validaciones
+        
         if (!nombre || nombre.trim() === '') {
             return res.status(400).json({
                 success: false,
@@ -15,7 +15,7 @@ const createMarca = async (req, res, next) => {
             });
         }
 
-        // Verificar que no exista
+        
         const marcaExistente = await Marca.findOne({
             where: { nombre: nombre.trim() }
         });
@@ -27,7 +27,7 @@ const createMarca = async (req, res, next) => {
             });
         }
 
-        // Crear
+        
         const marca = await Marca.create({
             nombre: nombre.trim(),
             activa: activa !== undefined ? activa : true
@@ -53,19 +53,19 @@ const createMarca = async (req, res, next) => {
     }
 };
 
-// ===== OBTENER TODAS LAS MARCAS =====
+
 const getMarcas = async (req, res, next) => {
     try {
         const { buscar, activa, incluir_productos } = req.query;
 
         const where = {};
 
-        // Búsqueda por nombre
+        
         if (buscar) {
             where.nombre = { [Op.like]: `%${buscar}%` };
         }
 
-        // Filtrar por estado
+        
         if (activa !== undefined) {
             where.activa = activa === 'true';
         }
@@ -75,7 +75,7 @@ const getMarcas = async (req, res, next) => {
             order: [['nombre', 'ASC']]
         };
 
-        // Incluir conteo de productos si se solicita
+        
         if (incluir_productos === 'true') {
             options.include = [
                 {
@@ -89,7 +89,7 @@ const getMarcas = async (req, res, next) => {
 
         const marcas = await Marca.findAll(options);
 
-        // Si se incluyeron productos, agregar conteo
+        
         const marcasConConteo = marcas.map(marca => {
             const marcaJSON = marca.toJSON();
             if (incluir_productos === 'true') {
@@ -111,7 +111,7 @@ const getMarcas = async (req, res, next) => {
     }
 };
 
-// ===== OBTENER MARCA POR ID =====
+
 const getMarcaById = async (req, res, next) => {
     try {
         const { id } = req.params;
@@ -147,7 +147,7 @@ const getMarcaById = async (req, res, next) => {
     }
 };
 
-// ===== ACTUALIZAR MARCA =====
+
 const updateMarca = async (req, res, next) => {
     try {
         const { id } = req.params;
@@ -162,7 +162,7 @@ const updateMarca = async (req, res, next) => {
             });
         }
 
-        // Validar nombre
+        
         if (nombre && nombre.trim() === '') {
             return res.status(400).json({
                 success: false,
@@ -170,7 +170,7 @@ const updateMarca = async (req, res, next) => {
             });
         }
 
-        // Si se está cambiando el nombre, verificar que no exista
+        
         if (nombre && nombre.trim() !== marca.nombre) {
             const nombreExistente = await Marca.findOne({
                 where: {
@@ -187,7 +187,7 @@ const updateMarca = async (req, res, next) => {
             }
         }
 
-        // Actualizar
+        
         await marca.update({
             nombre: nombre ? nombre.trim() : marca.nombre,
             activa: activa !== undefined ? activa : marca.activa
@@ -213,7 +213,7 @@ const updateMarca = async (req, res, next) => {
     }
 };
 
-// ===== DESACTIVAR MARCA =====
+
 const desactivarMarca = async (req, res, next) => {
     try {
         const { id } = req.params;
@@ -241,7 +241,7 @@ const desactivarMarca = async (req, res, next) => {
     }
 };
 
-// ===== REACTIVAR MARCA =====
+
 const reactivarMarca = async (req, res, next) => {
     try {
         const { id } = req.params;
@@ -269,7 +269,7 @@ const reactivarMarca = async (req, res, next) => {
     }
 };
 
-// ===== ELIMINAR MARCA =====
+
 const deleteMarca = async (req, res, next) => {
     try {
         const { id } = req.params;
@@ -291,7 +291,7 @@ const deleteMarca = async (req, res, next) => {
             });
         }
 
-        // Verificar si tiene productos asociados
+        
         if (marca.productos && marca.productos.length > 0) {
             return res.status(400).json({
                 success: false,
@@ -301,7 +301,7 @@ const deleteMarca = async (req, res, next) => {
             });
         }
 
-        // Eliminar
+        
         await marca.destroy();
 
         res.status(200).json({

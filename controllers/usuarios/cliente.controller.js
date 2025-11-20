@@ -1,8 +1,8 @@
-// controllers/usuarios/cliente.controller.js
+
 const { Cliente } = require('../../models/index');
 const bcrypt = require('bcrypt');
 
-// Obtener todos los clientes
+
 exports.getClientes = async (req, res, next) => {
     try {
         const { verificado, opt_in_promos } = req.query;
@@ -19,7 +19,7 @@ exports.getClientes = async (req, res, next) => {
 
         const clientes = await Cliente.findAll({
             where,
-            attributes: { exclude: ['password_hash'] }, // No exponer passwords
+            attributes: { exclude: ['password_hash'] }, 
             order: [['nombre', 'ASC']]
         });
 
@@ -34,7 +34,7 @@ exports.getClientes = async (req, res, next) => {
     }
 };
 
-// Obtener cliente por ID
+
 exports.getClienteById = async (req, res, next) => {
     try {
         const { id } = req.params;
@@ -60,7 +60,7 @@ exports.getClienteById = async (req, res, next) => {
     }
 };
 
-// Buscar cliente por NIT o email
+
 exports.buscarCliente = async (req, res, next) => {
     try {
         const { nit, email } = req.query;
@@ -98,7 +98,7 @@ exports.buscarCliente = async (req, res, next) => {
     }
 };
 
-// Crear nuevo cliente
+
 exports.createCliente = async (req, res, next) => {
     try {
         const { 
@@ -113,7 +113,7 @@ exports.createCliente = async (req, res, next) => {
             gps_lng 
         } = req.body;
 
-        // Validación básica
+        
         if (!nombre) {
             return res.status(400).json({
                 success: false,
@@ -121,7 +121,7 @@ exports.createCliente = async (req, res, next) => {
             });
         }
 
-        // Validar coordenadas GPS si se proporcionan
+        
         if (gps_lat && (gps_lat < -90 || gps_lat > 90)) {
             return res.status(400).json({
                 success: false,
@@ -136,7 +136,7 @@ exports.createCliente = async (req, res, next) => {
             });
         }
 
-        // Hashear password si se proporciona
+        
         let password_hash = null;
         if (password) {
             password_hash = await bcrypt.hash(password, 10);
@@ -148,14 +148,14 @@ exports.createCliente = async (req, res, next) => {
             email: email || null,
             password_hash,
             opt_in_promos: opt_in_promos || false,
-            verificado: false, // Por defecto no verificado
+            verificado: false, 
             telefono,
             direccion,
             gps_lat,
             gps_lng
         });
 
-        // No devolver el password_hash
+        
         const clienteResponse = cliente.toJSON();
         delete clienteResponse.password_hash;
 
@@ -183,7 +183,7 @@ exports.createCliente = async (req, res, next) => {
     }
 };
 
-// Actualizar cliente
+
 exports.updateCliente = async (req, res, next) => {
     try {
         const { id } = req.params;
@@ -208,7 +208,7 @@ exports.updateCliente = async (req, res, next) => {
             });
         }
 
-        // Validar coordenadas GPS si se proporcionan
+        
         if (gps_lat !== undefined && (gps_lat < -90 || gps_lat > 90)) {
             return res.status(400).json({
                 success: false,
@@ -223,7 +223,7 @@ exports.updateCliente = async (req, res, next) => {
             });
         }
 
-        // Preparar datos para actualizar
+        
         const updateData = {
             nombre: nombre || cliente.nombre,
             nit: nit !== undefined ? nit : cliente.nit,
@@ -235,14 +235,14 @@ exports.updateCliente = async (req, res, next) => {
             gps_lng: gps_lng !== undefined ? gps_lng : cliente.gps_lng
         };
 
-        // Actualizar password si se proporciona
+        
         if (password) {
             updateData.password_hash = await bcrypt.hash(password, 10);
         }
 
         await cliente.update(updateData);
 
-        // No devolver el password_hash
+        
         const clienteResponse = cliente.toJSON();
         delete clienteResponse.password_hash;
 
@@ -270,7 +270,7 @@ exports.updateCliente = async (req, res, next) => {
     }
 };
 
-// Eliminar cliente
+
 exports.deleteCliente = async (req, res, next) => {
     try {
         const { id } = req.params;
@@ -284,8 +284,8 @@ exports.deleteCliente = async (req, res, next) => {
             });
         }
 
-        // Verificar si el cliente tiene facturas
-        // (esto se implementará después cuando tengas el modelo Factura)
+        
+        
         
         await cliente.destroy();
 
@@ -299,7 +299,7 @@ exports.deleteCliente = async (req, res, next) => {
     }
 };
 
-// Verificar cliente (marcar como verificado)
+
 exports.verificarCliente = async (req, res, next) => {
     try {
         const { id } = req.params;
@@ -329,7 +329,7 @@ exports.verificarCliente = async (req, res, next) => {
     }
 };
 
-// Buscar clientes cercanos (por GPS)
+
 exports.getClientesCercanos = async (req, res, next) => {
     try {
         const { lat, lng, radio } = req.query;

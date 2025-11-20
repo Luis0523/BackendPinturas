@@ -1,7 +1,7 @@
-// controllers/core/sucursal.controller.js
+
 const { Sucursal } = require('../../models/index');
 
-// Obtener todas las sucursales activas
+
 exports.getSucursales = async (req, res, next) => {
     try {
         const sucursales = await Sucursal.findAll({
@@ -20,7 +20,7 @@ exports.getSucursales = async (req, res, next) => {
     }
 };
 
-// Obtener todas (incluyendo inactivas)
+
 exports.getAllSucursales = async (req, res, next) => {
     try {
         const sucursales = await Sucursal.findAll({
@@ -38,7 +38,7 @@ exports.getAllSucursales = async (req, res, next) => {
     }
 };
 
-// Obtener sucursal por ID
+
 exports.getSucursalById = async (req, res, next) => {
     try {
         const { id } = req.params;
@@ -62,12 +62,12 @@ exports.getSucursalById = async (req, res, next) => {
     }
 };
 
-// Crear nueva sucursal
+
 exports.createSucursal = async (req, res, next) => {
     try {
         const { nombre, direccion, gps_lat, gps_lng, telefono, activa } = req.body;
 
-        // Validación básica
+        
         if (!nombre) {
             return res.status(400).json({
                 success: false,
@@ -75,7 +75,7 @@ exports.createSucursal = async (req, res, next) => {
             });
         }
 
-        // Validar coordenadas GPS si se proporcionan
+        
         if (gps_lat && (gps_lat < -90 || gps_lat > 90)) {
             return res.status(400).json({
                 success: false,
@@ -116,7 +116,7 @@ exports.createSucursal = async (req, res, next) => {
     }
 };
 
-// Actualizar sucursal
+
 exports.updateSucursal = async (req, res, next) => {
     try {
         const { id } = req.params;
@@ -131,7 +131,7 @@ exports.updateSucursal = async (req, res, next) => {
             });
         }
 
-        // Validar coordenadas GPS si se proporcionan
+        
         if (gps_lat !== undefined && (gps_lat < -90 || gps_lat > 90)) {
             return res.status(400).json({
                 success: false,
@@ -172,7 +172,7 @@ exports.updateSucursal = async (req, res, next) => {
     }
 };
 
-// Eliminar (soft delete - desactivar)
+
 exports.deleteSucursal = async (req, res, next) => {
     try {
         const { id } = req.params;
@@ -186,7 +186,7 @@ exports.deleteSucursal = async (req, res, next) => {
             });
         }
 
-        // Soft delete: solo marcar como inactiva
+        
         await sucursal.update({ activa: false });
 
         res.status(200).json({
@@ -199,7 +199,7 @@ exports.deleteSucursal = async (req, res, next) => {
     }
 };
 
-// Reactivar sucursal
+
 exports.reactivarSucursal = async (req, res, next) => {
     try {
         const { id } = req.params;
@@ -226,7 +226,7 @@ exports.reactivarSucursal = async (req, res, next) => {
     }
 };
 
-// Buscar sucursales cercanas (por GPS)
+
 exports.getSucursalesCercanas = async (req, res, next) => {
     try {
         const { lat, lng, radio } = req.query;
@@ -240,9 +240,9 @@ exports.getSucursalesCercanas = async (req, res, next) => {
 
         const latitude = parseFloat(lat);
         const longitude = parseFloat(lng);
-        const radioKm = parseFloat(radio) || 10; // Radio por defecto: 10km
+        const radioKm = parseFloat(radio) || 10; 
 
-        // Fórmula de Haversine para calcular distancia
+        
         const sucursales = await Sucursal.findAll({
             where: { 
                 activa: true,

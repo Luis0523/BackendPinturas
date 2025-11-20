@@ -4,7 +4,7 @@ exports.getProductos = async (req, res, next) => {
     try {
         const { incluir_inactivos } = req.query;
 
-        // Por defecto, solo mostrar productos activos
+        
         const where = {};
         if (incluir_inactivos !== 'true') {
             where.activo = true;
@@ -15,12 +15,12 @@ exports.getProductos = async (req, res, next) => {
             include: [
                 {
                     model: Categoria,
-                    as: 'categoria',  // Importante: usar el alias definido
+                    as: 'categoria',  
                     attributes: ['id', 'nombre']
                 },
                 {
                     model: Marca,
-                    as: 'marca',  // Importante: usar el alias definido
+                    as: 'marca',  
                     attributes: ['id', 'nombre', 'activa']
                 }
             ]
@@ -69,7 +69,7 @@ exports.createProducto = async (req, res, next) => {
     try {
         const producto = await Producto.create(req.body);
         
-        // Obtener el producto con sus relaciones
+        
         const productoCompleto = await Producto.findByPk(producto.id, {
             include: [
                 { model: Categoria, as: 'categoria' },
@@ -90,7 +90,7 @@ exports.createProducto = async (req, res, next) => {
 
 
 
-// Al final de producto.controller.js, agrega:
+
 
 exports.updateProducto = async (req, res, next) => {
     try {
@@ -138,11 +138,11 @@ exports.deleteProducto = async (req, res, next) => {
             });
         }
 
-        // Soft delete: marcar como inactivo en lugar de eliminar
-        // También desactivar todas las presentaciones del producto
+        
+        
         await producto.update({ activo: false });
 
-        // Desactivar todas las presentaciones asociadas
+        
         await ProductoPresentacion.update(
             { activo: false },
             { where: { producto_id: id } }
@@ -172,10 +172,10 @@ exports.reactivarProducto = async (req, res, next) => {
             });
         }
 
-        // Reactivar el producto
+        
         await producto.update({ activo: true });
 
-        // Reactivar todas las presentaciones asociadas
+        
         await ProductoPresentacion.update(
             { activo: true },
             { where: { producto_id: id } }

@@ -1,7 +1,7 @@
-// controllers/core/rol.controller.js
+
 const { Rol } = require('../../models/index');
 
-// Obtener todos los roles
+
 exports.getRoles = async (req, res, next) => {
     try {
         const roles = await Rol.findAll({
@@ -19,7 +19,7 @@ exports.getRoles = async (req, res, next) => {
     }
 };
 
-// Obtener rol por ID
+
 exports.getRolById = async (req, res, next) => {
     try {
         const { id } = req.params;
@@ -43,12 +43,12 @@ exports.getRolById = async (req, res, next) => {
     }
 };
 
-// Crear nuevo rol
+
 exports.createRol = async (req, res, next) => {
     try {
         const { nombre } = req.body;
 
-        // Validación básica
+        
         if (!nombre) {
             return res.status(400).json({
                 success: false,
@@ -64,7 +64,7 @@ exports.createRol = async (req, res, next) => {
             data: rol
         });
     } catch (error) {
-        // Error de duplicado (nombre único)
+        
         if (error.name === 'SequelizeUniqueConstraintError') {
             return res.status(400).json({
                 success: false,
@@ -76,7 +76,7 @@ exports.createRol = async (req, res, next) => {
     }
 };
 
-// Actualizar rol
+
 exports.updateRol = async (req, res, next) => {
     try {
         const { id } = req.params;
@@ -117,7 +117,7 @@ exports.updateRol = async (req, res, next) => {
     }
 };
 
-// Eliminar rol
+
 exports.deleteRol = async (req, res, next) => {
     try {
         const { id } = req.params;
@@ -131,7 +131,7 @@ exports.deleteRol = async (req, res, next) => {
             });
         }
 
-        // Verificar si hay usuarios con este rol
+        
         const { Usuario } = require('../../models/index');
         const usuariosConRol = await Usuario.count({
             where: { rol_id: id }

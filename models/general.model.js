@@ -1,7 +1,7 @@
 const { DataTypes } = require('sequelize');
 const db = require('../db/db');
 
-// ===== DEFINICIÓN DE MODELOS =====
+
 const Marca = db.define('Marca', {
     id: {
         type: DataTypes.INTEGER,
@@ -90,7 +90,7 @@ const Producto = db.define('Producto', {
     timestamps: true
 });
 
-// ===== RELACIONES (SE EJECUTAN INMEDIATAMENTE) =====
+
 Categoria.hasMany(Producto, { 
     foreignKey: 'categoria_id',
     as: 'productos'
@@ -111,7 +111,7 @@ Producto.belongsTo(Marca, {
     as: 'marca'
 });
 
-// ===== EXPORTACIÓN =====
+
 module.exports = { 
     Producto, 
     Categoria, 

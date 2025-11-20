@@ -1,8 +1,8 @@
-// controllers/compras/proveedor.controller.js
+
 const { Proveedor } = require('../../models/index');
 const { Op } = require('sequelize');
 
-// ===== CREAR PROVEEDOR =====
+
 const createProveedor = async (req, res, next) => {
     try {
         const {
@@ -15,7 +15,7 @@ const createProveedor = async (req, res, next) => {
             contacto_principal
         } = req.body;
 
-        // Validación básica
+        
         if (!nombre || nombre.trim() === '') {
             return res.status(400).json({
                 success: false,
@@ -23,7 +23,7 @@ const createProveedor = async (req, res, next) => {
             });
         }
 
-        // Crear proveedor
+        
         const proveedor = await Proveedor.create({
             nombre: nombre.trim(),
             razon_social: razon_social?.trim() || null,
@@ -47,19 +47,19 @@ const createProveedor = async (req, res, next) => {
     }
 };
 
-// ===== OBTENER TODOS LOS PROVEEDORES =====
+
 const getProveedores = async (req, res, next) => {
     try {
         const { activo, buscar } = req.query;
 
         const where = {};
 
-        // Filtro por activo
+        
         if (activo !== undefined) {
             where.activo = activo === 'true';
         }
 
-        // Búsqueda por nombre, razón social o NIT
+        
         if (buscar) {
             where[Op.or] = [
                 { nombre: { [Op.like]: `%${buscar}%` } },
@@ -85,7 +85,7 @@ const getProveedores = async (req, res, next) => {
     }
 };
 
-// ===== OBTENER PROVEEDOR POR ID =====
+
 const getProveedorById = async (req, res, next) => {
     try {
         const { id } = req.params;
@@ -110,7 +110,7 @@ const getProveedorById = async (req, res, next) => {
     }
 };
 
-// ===== ACTUALIZAR PROVEEDOR =====
+
 const updateProveedor = async (req, res, next) => {
     try {
         const { id } = req.params;
@@ -134,7 +134,7 @@ const updateProveedor = async (req, res, next) => {
             });
         }
 
-        // Actualizar
+        
         await proveedor.update({
             nombre: nombre?.trim() || proveedor.nombre,
             razon_social: razon_social?.trim() || proveedor.razon_social,
@@ -158,7 +158,7 @@ const updateProveedor = async (req, res, next) => {
     }
 };
 
-// ===== ELIMINAR (DESACTIVAR) PROVEEDOR =====
+
 const deleteProveedor = async (req, res, next) => {
     try {
         const { id } = req.params;
@@ -172,7 +172,7 @@ const deleteProveedor = async (req, res, next) => {
             });
         }
 
-        // Desactivar en lugar de eliminar
+        
         await proveedor.update({ activo: false });
 
         res.status(200).json({

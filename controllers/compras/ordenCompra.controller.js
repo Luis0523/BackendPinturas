@@ -1,4 +1,4 @@
-// controllers/compras/ordenCompra.controller.js
+
 const {
     OrdenCompra,
     DetalleOrdenCompra,
@@ -14,7 +14,7 @@ const {
 const db = require('../../db/db');
 const { Op } = require('sequelize');
 
-// ===== FUNCIÓN AUXILIAR: Obtener siguiente número =====
+
 const obtenerSiguienteNumero = async (serie, transaction) => {
     const [secuencia] = await db.query(
         'SELECT ultimo_numero FROM secuencias_facturas WHERE serie = ? FOR UPDATE',
@@ -42,7 +42,7 @@ const obtenerSiguienteNumero = async (serie, transaction) => {
     return nuevoNumero;
 };
 
-// ===== CREAR ORDEN DE COMPRA =====
+
 const createOrdenCompra = async (req, res, next) => {
     const transaction = await db.transaction();
 
@@ -58,7 +58,7 @@ const createOrdenCompra = async (req, res, next) => {
             observaciones
         } = req.body;
 
-        // ========== VALIDACIONES BÁSICAS ==========
+        
         if (!proveedor_id || !sucursal_id || !usuario_id || !fecha_orden) {
             await transaction.rollback();
             return res.status(400).json({
@@ -75,7 +75,7 @@ const createOrdenCompra = async (req, res, next) => {
             });
         }
 
-        // ========== VERIFICAR ENTIDADES ==========
+        
         const proveedor = await Proveedor.findByPk(proveedor_id);
         if (!proveedor || !proveedor.activo) {
             await transaction.rollback();
@@ -103,7 +103,7 @@ const createOrdenCompra = async (req, res, next) => {
             });
         }
 
-        // ========== VALIDAR Y CALCULAR ITEMS ==========
+        
         let subtotal = 0;
         let descuento_total = 0;
         const detallesParaCrear = [];
@@ -111,7 +111,7 @@ const createOrdenCompra = async (req, res, next) => {
         for (const item of items) {
             const { producto_presentacion_id, cantidad, precio_unitario, descuento_pct = 0 } = item;
 
-            // Validaciones del item
+            
             if (!producto_presentacion_id || !cantidad || precio_unitario === undefined) {
                 await transaction.rollback();
                 return res.status(400).json({
@@ -136,7 +136,7 @@ const createOrdenCompra = async (req, res, next) => {
                 });
             }
 
-            // Verificar que el producto existe
+            
             const productoPresentacion = await ProductoPresentacion.findByPk(producto_presentacion_id);
             if (!productoPresentacion || !productoPresentacion.activo) {
                 await transaction.rollback();
@@ -146,7 +146,7 @@ const createOrdenCompra = async (req, res, next) => {
                 });
             }
 
-            // Calcular subtotal del item
+            
             const subtotal_item = cantidad * precio_unitario;
             const descuento_item = subtotal_item * (descuento_pct / 100);
             const subtotal_neto = subtotal_item - descuento_item;
@@ -154,7 +154,7 @@ const createOrdenCompra = async (req, res, next) => {
             subtotal += subtotal_item;
             descuento_total += descuento_item;
 
-            // Guardar para crear después
+            
             detallesParaCrear.push({
                 producto_presentacion_id,
                 cantidad,
@@ -166,10 +166,10 @@ const createOrdenCompra = async (req, res, next) => {
 
         const total = subtotal - descuento_total;
 
-        // ========== OBTENER NÚMERO CORRELATIVO ==========
+        
         const numero = await obtenerSiguienteNumero(serie, transaction);
 
-        // ========== CREAR ORDEN ==========
+        
         const orden = await OrdenCompra.create({
             numero,
             serie,
@@ -185,7 +185,7 @@ const createOrdenCompra = async (req, res, next) => {
             observaciones: observaciones || null
         }, { transaction });
 
-        // ========== CREAR DETALLES ==========
+        
         for (const detalle of detallesParaCrear) {
             await DetalleOrdenCompra.create({
                 orden_compra_id: orden.id,
@@ -198,10 +198,10 @@ const createOrdenCompra = async (req, res, next) => {
             }, { transaction });
         }
 
-        // ========== COMMIT ==========
+        
         await transaction.commit();
 
-        // ========== OBTENER ORDEN COMPLETA ==========
+        
         const ordenCompleta = await OrdenCompra.findByPk(orden.id, {
             include: [
                 {
@@ -249,7 +249,7 @@ const createOrdenCompra = async (req, res, next) => {
     }
 };
 
-// ===== OBTENER TODAS LAS ÓRDENES =====
+
 const getOrdenesCompra = async (req, res, next) => {
     try {
         const {
@@ -317,7 +317,7 @@ const getOrdenesCompra = async (req, res, next) => {
     }
 };
 
-// ===== OBTENER ORDEN POR ID =====
+
 const getOrdenCompraById = async (req, res, next) => {
     try {
         const { id } = req.params;
@@ -387,7 +387,7 @@ const getOrdenCompraById = async (req, res, next) => {
     }
 };
 
-// ===== CANCELAR ORDEN =====
+
 const cancelarOrdenCompra = async (req, res, next) => {
     try {
         const { id } = req.params;

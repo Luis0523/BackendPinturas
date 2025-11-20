@@ -1,13 +1,13 @@
-// controllers/core/categoria.controller.js
+
 const { Categoria, Producto } = require('../../models/index');
 const { Op } = require('sequelize');
 
-// ===== CREAR CATEGORÍA =====
+
 const createCategoria = async (req, res, next) => {
     try {
         const { nombre, descripcion } = req.body;
 
-        // Validaciones
+        
         if (!nombre || nombre.trim() === '') {
             return res.status(400).json({
                 success: false,
@@ -15,7 +15,7 @@ const createCategoria = async (req, res, next) => {
             });
         }
 
-        // Verificar que no exista
+        
         const categoriaExistente = await Categoria.findOne({
             where: { nombre: nombre.trim() }
         });
@@ -27,7 +27,7 @@ const createCategoria = async (req, res, next) => {
             });
         }
 
-        // Crear
+        
         const categoria = await Categoria.create({
             nombre: nombre.trim(),
             descripcion: descripcion?.trim() || null
@@ -42,7 +42,7 @@ const createCategoria = async (req, res, next) => {
     } catch (error) {
         console.error('Error en createCategoria:', error);
         
-        // Error de unique constraint
+        
         if (error.name === 'SequelizeUniqueConstraintError') {
             return res.status(400).json({
                 success: false,
@@ -54,14 +54,14 @@ const createCategoria = async (req, res, next) => {
     }
 };
 
-// ===== OBTENER TODAS LAS CATEGORÍAS =====
+
 const getCategorias = async (req, res, next) => {
     try {
         const { buscar, incluir_productos } = req.query;
 
         const where = {};
 
-        // Búsqueda por nombre
+        
         if (buscar) {
             where.nombre = { [Op.like]: `%${buscar}%` };
         }
@@ -71,7 +71,7 @@ const getCategorias = async (req, res, next) => {
             order: [['nombre', 'ASC']]
         };
 
-        // Incluir conteo de productos si se solicita
+        
         if (incluir_productos === 'true') {
             options.include = [
                 {
@@ -85,12 +85,12 @@ const getCategorias = async (req, res, next) => {
 
         const categorias = await Categoria.findAll(options);
 
-        // Si se incluyeron productos, agregar conteo
+        
         const categoriasConConteo = categorias.map(cat => {
             const catJSON = cat.toJSON();
             if (incluir_productos === 'true') {
                 catJSON.total_productos = catJSON.productos ? catJSON.productos.length : 0;
-                delete catJSON.productos; // No devolver el array completo
+                delete catJSON.productos; 
             }
             return catJSON;
         });
@@ -107,7 +107,7 @@ const getCategorias = async (req, res, next) => {
     }
 };
 
-// ===== OBTENER CATEGORÍA POR ID =====
+
 const getCategoriaById = async (req, res, next) => {
     try {
         const { id } = req.params;
@@ -143,7 +143,7 @@ const getCategoriaById = async (req, res, next) => {
     }
 };
 
-// ===== ACTUALIZAR CATEGORÍA =====
+
 const updateCategoria = async (req, res, next) => {
     try {
         const { id } = req.params;
@@ -158,7 +158,7 @@ const updateCategoria = async (req, res, next) => {
             });
         }
 
-        // Validar nombre
+        
         if (nombre && nombre.trim() === '') {
             return res.status(400).json({
                 success: false,
@@ -166,7 +166,7 @@ const updateCategoria = async (req, res, next) => {
             });
         }
 
-        // Si se está cambiando el nombre, verificar que no exista
+        
         if (nombre && nombre.trim() !== categoria.nombre) {
             const nombreExistente = await Categoria.findOne({
                 where: {
@@ -183,7 +183,7 @@ const updateCategoria = async (req, res, next) => {
             }
         }
 
-        // Actualizar
+        
         await categoria.update({
             nombre: nombre ? nombre.trim() : categoria.nombre,
             descripcion: descripcion !== undefined ? (descripcion?.trim() || null) : categoria.descripcion
@@ -209,7 +209,7 @@ const updateCategoria = async (req, res, next) => {
     }
 };
 
-// ===== ELIMINAR CATEGORÍA =====
+
 const deleteCategoria = async (req, res, next) => {
     try {
         const { id } = req.params;
@@ -231,7 +231,7 @@ const deleteCategoria = async (req, res, next) => {
             });
         }
 
-        // Verificar si tiene productos asociados
+        
         if (categoria.productos && categoria.productos.length > 0) {
             return res.status(400).json({
                 success: false,
@@ -240,7 +240,7 @@ const deleteCategoria = async (req, res, next) => {
             });
         }
 
-        // Eliminar
+        
         await categoria.destroy();
 
         res.status(200).json({
@@ -251,7 +251,7 @@ const deleteCategoria = async (req, res, next) => {
     } catch (error) {
         console.error('Error en deleteCategoria:', error);
         
-        // Error de foreign key constraint
+        
         if (error.name === 'SequelizeForeignKeyConstraintError') {
             return res.status(400).json({
                 success: false,

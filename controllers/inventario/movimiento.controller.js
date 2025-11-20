@@ -1,8 +1,8 @@
-// controllers/inventario/movimiento.controller.js
+
 const { MovimientoInventario, ProductoPresentacion, Producto, Presentacion, Sucursal, Categoria, Marca } = require('../../models/index');
 const { Op } = require('sequelize');
 
-// Obtener todos los movimientos con filtros
+
 const getMovimientos = async (req, res, next) => {
     try {
         const { sucursal_id, producto_presentacion_id, tipo, desde, hasta, limit } = req.query;
@@ -76,7 +76,7 @@ const getMovimientos = async (req, res, next) => {
     }
 };
 
-// Obtener movimientos de una sucursal
+
 const getMovimientosSucursal = async (req, res, next) => {
     try {
         const { sucursal_id } = req.params;
@@ -139,7 +139,7 @@ const getMovimientosSucursal = async (req, res, next) => {
     }
 };
 
-// Obtener movimientos de un producto
+
 const getMovimientosProducto = async (req, res, next) => {
     try {
         const { producto_presentacion_id } = req.params;
@@ -206,7 +206,7 @@ const getMovimientosProducto = async (req, res, next) => {
     }
 };
 
-// Obtener movimientos por tipo
+
 const getMovimientosPorTipo = async (req, res, next) => {
     try {
         const { tipo } = req.params;
@@ -272,7 +272,7 @@ const getMovimientosPorTipo = async (req, res, next) => {
     }
 };
 
-// Reporte resumido por tipo
+
 const getResumenMovimientos = async (req, res, next) => {
     try {
         const { sucursal_id, desde, hasta } = req.query;
@@ -322,12 +322,12 @@ const getResumenMovimientos = async (req, res, next) => {
     }
 };
 
-// Crear movimiento manual (normalmente se crean automáticamente)
+
 const createMovimiento = async (req, res, next) => {
     try {
         const { sucursal_id, producto_presentacion_id, tipo, cantidad, referencia } = req.body;
 
-        // Validaciones
+        
         if (!sucursal_id || !producto_presentacion_id || !tipo || cantidad === undefined) {
             return res.status(400).json({
                 success: false,
@@ -343,7 +343,7 @@ const createMovimiento = async (req, res, next) => {
             });
         }
 
-        // Verificar que sucursal existe
+        
         const sucursal = await Sucursal.findByPk(sucursal_id);
         if (!sucursal) {
             return res.status(404).json({
@@ -352,7 +352,7 @@ const createMovimiento = async (req, res, next) => {
             });
         }
 
-        // Verificar que producto-presentación existe
+        
         const productoPresentacion = await ProductoPresentacion.findByPk(producto_presentacion_id);
         if (!productoPresentacion) {
             return res.status(404).json({
@@ -361,7 +361,7 @@ const createMovimiento = async (req, res, next) => {
             });
         }
 
-        // Crear movimiento
+        
         const movimiento = await MovimientoInventario.create({
             sucursal_id,
             producto_presentacion_id,
@@ -370,7 +370,7 @@ const createMovimiento = async (req, res, next) => {
             referencia
         });
 
-        // Obtener con relaciones
+        
         const movimientoCompleto = await MovimientoInventario.findByPk(movimiento.id, {
             include: [
                 {

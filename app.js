@@ -6,8 +6,8 @@ const { sequelize } = require('./models/index');
 const rutasindex = require('./routes/index');
 const app = express();
 
-// ==================== CONFIGURACIÓN DE CORS ====================
-// Configurar CORS para permitir peticiones desde el frontend
+
+
 const corsOptions = {
     origin: [
         'http://localhost:5500',
@@ -23,14 +23,14 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
-// ==================== MIDDLEWARES ====================
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// ==================== RUTAS ====================
+
 app.use('', rutasindex);
 
-// Ruta de health check (opcional pero útil)
+
 app.get('/health', (req, res) => {
     res.json({ 
         success: true, 
@@ -39,7 +39,7 @@ app.get('/health', (req, res) => {
     });
 });
 
-// ==================== SINCRONIZACIÓN DE BASE DE DATOS ====================
+
 sequelize.sync({ alter: false })
     .then(() => {
         const PORT = process.env.PORT || 5000;
@@ -54,8 +54,8 @@ sequelize.sync({ alter: false })
         process.exit(1);
     });
 
-// ==================== MIDDLEWARE DE MANEJO DE ERRORES ====================
-// Ruta no encontrada (404)
+
+
 app.use((req, res, next) => {
     res.status(404).json({
         success: false,
@@ -64,7 +64,7 @@ app.use((req, res, next) => {
     });
 });
 
-// Middleware de errores generales
+
 app.use((err, req, res, next) => {
     console.error('❌ Error:', err.stack);
     

@@ -1,8 +1,8 @@
-// controllers/inventario/precio.controller.js
+
 const { Precio, ProductoPresentacion, Producto, Presentacion, Sucursal, Categoria, Marca } = require('../../models/index');
 const { Op } = require('sequelize');
 
-// Obtener todos los precios vigentes
+
 const getPreciosVigentes = async (req, res, next) => {
     try {
         const { sucursal_id, producto_presentacion_id } = req.query;
@@ -65,7 +65,7 @@ const getPreciosVigentes = async (req, res, next) => {
     }
 };
 
-// Obtener precio por ID
+
 const getPrecioById = async (req, res, next) => {
     try {
         const { id } = req.params;
@@ -104,18 +104,18 @@ const getPrecioById = async (req, res, next) => {
     }
 };
 
-// Obtener precio vigente de un producto-presentación en una sucursal
-// Obtener precio vigente de un producto-presentación en una sucursal
+
+
 const getPrecioVigenteProducto = async (req, res, next) => {
     console.log('HOLA, ENTRE AL CONTROLADOR');
     try {
         const { producto_presentacion_id, sucursal_id } = req.params;
         console.log('AQUI, FUI LLAMADO');
-        // ✅ CONVERTIR A NÚMEROS
+        
         const ppId = parseInt(producto_presentacion_id);
         const sucId = parseInt(sucursal_id);
 
-        // ✅ VALIDAR QUE SEAN NÚMEROS VÁLIDOS
+        
         if (isNaN(ppId) || isNaN(sucId)) {
             return res.status(400).json({
                 success: false,
@@ -128,11 +128,11 @@ const getPrecioVigenteProducto = async (req, res, next) => {
             sucursal_id: sucId
         });
 
-        // Buscar precio específico de sucursal primero
+        
         let precio = await Precio.findOne({
             where: {
-                producto_presentacion_id: ppId,  // ✅ Usar el número convertido
-                sucursal_id: sucId,               // ✅ Usar el número convertido
+                producto_presentacion_id: ppId,  
+                sucursal_id: sucId,               
                 activo: true,
                 vigente_desde: { [Op.lte]: new Date() },
                 [Op.or]: [
@@ -144,7 +144,7 @@ const getPrecioVigenteProducto = async (req, res, next) => {
                 {
                     model: ProductoPresentacion,
                     as: 'productoPresentacion',
-                    include: [  // ✅ AGREGAR INCLUDES FALTANTES
+                    include: [  
                         {
                             model: Producto,
                             as: 'producto',
@@ -169,13 +169,13 @@ const getPrecioVigenteProducto = async (req, res, next) => {
 
         console.log('✅ Precio encontrado (específico):', precio ? precio.id : 'No encontrado');
 
-        // Si no hay precio específico, buscar precio global (sucursal_id = NULL)
+        
         if (!precio) {
             console.log('🔍 Buscando precio global (sucursal_id = NULL)...');
             
             precio = await Precio.findOne({
                 where: {
-                    producto_presentacion_id: ppId,  // ✅ Usar el número convertido
+                    producto_presentacion_id: ppId,  
                     sucursal_id: null,
                     activo: true,
                     vigente_desde: { [Op.lte]: new Date() },
@@ -188,7 +188,7 @@ const getPrecioVigenteProducto = async (req, res, next) => {
                     {
                         model: ProductoPresentacion,
                         as: 'productoPresentacion',
-                        include: [  // ✅ AGREGAR INCLUDES FALTANTES
+                        include: [  
                             {
                                 model: Producto,
                                 as: 'producto',
@@ -217,7 +217,7 @@ const getPrecioVigenteProducto = async (req, res, next) => {
             });
         }
 
-        // Calcular precio final con descuento
+        
         const precio_final = parseFloat(precio.precio_venta) * (1 - parseFloat(precio.descuento_pct) / 100);
 
         res.status(200).json({
@@ -234,7 +234,7 @@ const getPrecioVigenteProducto = async (req, res, next) => {
     }
 };
 
-// Crear nuevo precio
+
 const createPrecio = async (req, res, next) => {
     try {
         const {
@@ -247,7 +247,7 @@ const createPrecio = async (req, res, next) => {
             vigente_hasta
         } = req.body;
 
-        // Validaciones
+        
         if (!producto_presentacion_id || !precio_venta) {
             return res.status(400).json({
                 success: false,
@@ -269,7 +269,7 @@ const createPrecio = async (req, res, next) => {
             });
         }
 
-        // Verificar que producto-presentación existe
+        
         const productoPresentacion = await ProductoPresentacion.findByPk(producto_presentacion_id);
         if (!productoPresentacion) {
             return res.status(404).json({
@@ -278,7 +278,7 @@ const createPrecio = async (req, res, next) => {
             });
         }
 
-        // Verificar sucursal si se proporciona
+        
         if (sucursal_id) {
             const sucursal = await Sucursal.findByPk(sucursal_id);
             if (!sucursal) {
@@ -289,7 +289,7 @@ const createPrecio = async (req, res, next) => {
             }
         }
 
-        // Crear precio
+        
         const precio = await Precio.create({
             producto_presentacion_id,
             sucursal_id: sucursal_id || null,
@@ -301,7 +301,7 @@ const createPrecio = async (req, res, next) => {
             activo: true
         });
 
-        // Obtener precio creado con relaciones
+        
         const precioCreado = await Precio.findByPk(precio.id, {
             include: [
                 {
@@ -327,7 +327,7 @@ const createPrecio = async (req, res, next) => {
     }
 };
 
-// Actualizar precio
+
 const updatePrecio = async (req, res, next) => {
     try {
         const { id } = req.params;
@@ -342,7 +342,7 @@ const updatePrecio = async (req, res, next) => {
             });
         }
 
-        // Validaciones
+        
         if (precio_venta !== undefined && precio_venta <= 0) {
             return res.status(400).json({
                 success: false,
@@ -357,7 +357,7 @@ const updatePrecio = async (req, res, next) => {
             });
         }
 
-        // Actualizar
+        
         await precio.update({
             precio_venta: precio_venta !== undefined ? precio_venta : precio.precio_venta,
             descuento_pct: descuento_pct !== undefined ? descuento_pct : precio.descuento_pct,
@@ -366,7 +366,7 @@ const updatePrecio = async (req, res, next) => {
             activo: activo !== undefined ? activo : precio.activo
         });
 
-        // Obtener actualizado con relaciones
+        
         const precioActualizado = await Precio.findByPk(id, {
             include: [
                 {
@@ -392,7 +392,7 @@ const updatePrecio = async (req, res, next) => {
     }
 };
 
-// Desactivar precio
+
 const desactivarPrecio = async (req, res, next) => {
     try {
         const { id } = req.params;
@@ -421,7 +421,7 @@ const desactivarPrecio = async (req, res, next) => {
     }
 };
 
-// Obtener catálogo vendible con precios
+
 const getCatalogoConPrecios = async (req, res, next) => {
     try {
         const { sucursal_id } = req.query;
@@ -433,7 +433,7 @@ const getCatalogoConPrecios = async (req, res, next) => {
             });
         }
 
-        // Obtener todos los productos-presentación activos
+        
         const productoPresentaciones = await ProductoPresentacion.findAll({
             where: { activo: true },
             include: [
@@ -454,10 +454,10 @@ const getCatalogoConPrecios = async (req, res, next) => {
             ]
         });
 
-        // Para cada producto-presentación, buscar su precio
+        
         const catalogoConPrecios = await Promise.all(
             productoPresentaciones.map(async (pp) => {
-                // Buscar precio específico de sucursal
+                
                 let precio = await Precio.findOne({
                     where: {
                         producto_presentacion_id: pp.id,
@@ -472,7 +472,7 @@ const getCatalogoConPrecios = async (req, res, next) => {
                     order: [['vigente_desde', 'DESC']]
                 });
 
-                // Si no hay precio específico, buscar global
+                
                 if (!precio) {
                     precio = await Precio.findOne({
                         where: {

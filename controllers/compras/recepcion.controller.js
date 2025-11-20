@@ -1,4 +1,4 @@
-// controllers/compras/recepcion.controller.js
+
 const {
     Recepcion,
     DetalleRecepcion,
@@ -14,7 +14,7 @@ const {
 } = require('../../models/index');
 const db = require('../../db/db');
 
-// ===== CREAR RECEPCIÓN =====
+
 const createRecepcion = async (req, res, next) => {
     const transaction = await db.transaction();
 
@@ -22,11 +22,11 @@ const createRecepcion = async (req, res, next) => {
         const {
             orden_compra_id,
             usuario_id,
-            items, // Array de { detalle_orden_id, cantidad_recibida, sucursal_id }
+            items, 
             observaciones
         } = req.body;
 
-        // ========== VALIDACIONES BÁSICAS ==========
+        
         if (!orden_compra_id || !usuario_id) {
             await transaction.rollback();
             return res.status(400).json({
@@ -43,7 +43,7 @@ const createRecepcion = async (req, res, next) => {
             });
         }
 
-        // ========== VERIFICAR ORDEN ==========
+        
         const orden = await OrdenCompra.findByPk(orden_compra_id, {
             include: [
                 {
@@ -77,7 +77,7 @@ const createRecepcion = async (req, res, next) => {
             });
         }
 
-        // ========== VERIFICAR USUARIO ==========
+        
         const usuario = await Usuario.findByPk(usuario_id);
         if (!usuario) {
             await transaction.rollback();
@@ -87,7 +87,7 @@ const createRecepcion = async (req, res, next) => {
             });
         }
 
-        // ========== VALIDAR ITEMS Y SUCURSALES ==========
+        
         const sucursalesUsadas = new Set();
 
         for (const item of items) {
@@ -109,7 +109,7 @@ const createRecepcion = async (req, res, next) => {
                 });
             }
 
-            // Validar que la sucursal existe
+            
             const sucursal = await Sucursal.findByPk(sucursal_id);
             if (!sucursal) {
                 await transaction.rollback();
@@ -120,7 +120,7 @@ const createRecepcion = async (req, res, next) => {
             }
             sucursalesUsadas.add(sucursal_id);
 
-            // Buscar detalle de orden
+            
             const detalleOrden = orden.detalles.find(d => d.id === detalle_orden_id);
 
             if (!detalleOrden) {
@@ -131,7 +131,7 @@ const createRecepcion = async (req, res, next) => {
                 });
             }
 
-            // Validar que no exceda lo ordenado
+            
             const pendiente = detalleOrden.cantidad - detalleOrden.cantidad_recibida;
 
             if (cantidad_recibida > pendiente) {
@@ -144,7 +144,7 @@ const createRecepcion = async (req, res, next) => {
             }
         }
 
-        // ========== AGRUPAR ITEMS POR SUCURSAL ==========
+        
         const itemsPorSucursal = {};
         items.forEach(item => {
             const sucId = item.sucursal_id;
@@ -158,11 +158,11 @@ const createRecepcion = async (req, res, next) => {
 
         const recepcionesCreadas = [];
 
-        // ========== CREAR UNA RECEPCIÓN POR CADA SUCURSAL ==========
+        
         for (const [sucursal_id, itemsSucursal] of Object.entries(itemsPorSucursal)) {
             console.log(`📍 Procesando ${itemsSucursal.length} items para sucursal ${sucursal_id}`);
 
-            // Crear recepción para esta sucursal
+            
             const recepcion = await Recepcion.create({
                 orden_compra_id,
                 sucursal_id: parseInt(sucursal_id),
@@ -170,14 +170,14 @@ const createRecepcion = async (req, res, next) => {
                 observaciones: observaciones || null
             }, { transaction });
 
-            // Procesar cada item de esta sucursal
+            
             for (const item of itemsSucursal) {
                 const { detalle_orden_id, cantidad_recibida, observaciones: obs_item } = item;
 
-                // Buscar detalle de orden
+                
                 const detalleOrden = await DetalleOrdenCompra.findByPk(detalle_orden_id);
 
-                // Crear detalle de recepción
+                
                 await DetalleRecepcion.create({
                     recepcion_id: recepcion.id,
                     detalle_orden_id,
@@ -185,12 +185,12 @@ const createRecepcion = async (req, res, next) => {
                     observaciones: obs_item || null
                 }, { transaction });
 
-                // Actualizar cantidad_recibida en detalle_orden
+                
                 await detalleOrden.update({
                     cantidad_recibida: detalleOrden.cantidad_recibida + cantidad_recibida
                 }, { transaction });
 
-                // ========== ACTUALIZAR INVENTARIO DE LA SUCURSAL CORRESPONDIENTE ==========
+                
                 const inventario = await InventarioSucursal.findOne({
                     where: {
                         sucursal_id: parseInt(sucursal_id),
@@ -199,12 +199,12 @@ const createRecepcion = async (req, res, next) => {
                 });
 
                 if (inventario) {
-                    // Si ya existe inventario, sumar
+                    
                     await inventario.update({
                         existencia: inventario.existencia + cantidad_recibida
                     }, { transaction });
                 } else {
-                    // Si no existe, crear
+                    
                     await InventarioSucursal.create({
                         sucursal_id: parseInt(sucursal_id),
                         producto_presentacion_id: detalleOrden.producto_presentacion_id,
@@ -213,7 +213,7 @@ const createRecepcion = async (req, res, next) => {
                     }, { transaction });
                 }
 
-                // ========== CREAR MOVIMIENTO DE INVENTARIO ==========
+                
                 await MovimientoInventario.create({
                     sucursal_id: parseInt(sucursal_id),
                     producto_presentacion_id: detalleOrden.producto_presentacion_id,
@@ -226,7 +226,7 @@ const createRecepcion = async (req, res, next) => {
             recepcionesCreadas.push(recepcion.id);
         }
 
-        // ========== ACTUALIZAR ESTADO DE ORDEN ==========
+        
         const detallesActualizados = await DetalleOrdenCompra.findAll({
             where: { orden_compra_id },
             transaction
@@ -257,10 +257,10 @@ const createRecepcion = async (req, res, next) => {
 
         await orden.update({ estado: nuevoEstado }, { transaction });
 
-        // ========== COMMIT ==========
+        
         await transaction.commit();
 
-        // ========== OBTENER RECEPCIONES COMPLETAS ==========
+        
         const recepcionesCompletas = await Recepcion.findAll({
             where: { id: recepcionesCreadas },
             include: [
@@ -316,7 +316,7 @@ const createRecepcion = async (req, res, next) => {
     }
 };
 
-// ===== OBTENER TODAS LAS RECEPCIONES =====
+
 const getRecepciones = async (req, res, next) => {
     try {
         const { orden_compra_id, sucursal_id, usuario_id } = req.query;
@@ -361,7 +361,7 @@ const getRecepciones = async (req, res, next) => {
     }
 };
 
-// ===== OBTENER RECEPCIÓN POR ID =====
+
 const getRecepcionById = async (req, res, ReintentarLContinuarnext) => {
     try {
         const { id } = req.params;

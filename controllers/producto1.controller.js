@@ -1,16 +1,16 @@
-// FUNCIONAMIENTO DE TODAS LAS RUTAS DE PRODUCTO
+
 
 const models = require('../models/index');
 
 module.exports = {
 
-    // Obtener todos los productos con sus categorías y marcas
+    
     listar: async (req, res, next) => {
         try {
             const productos = await models.producto.findAll({
                 include: [
-                    { model: models.categoria, attributes: ['nombre'] }, // Incluir categoría
-                    { model: models.marca, attributes: ['nombre'] }      // Incluir marca
+                    { model: models.categoria, attributes: ['nombre'] }, 
+                    { model: models.marca, attributes: ['nombre'] }      
                 ]
             });
 
@@ -26,7 +26,7 @@ module.exports = {
         }
     },
 
-    // Obtener un producto por su ID con categoría y marca
+    
     listarInfo: async (req, res, next) => {
         try {
             const producto = await models.producto.findByPk(req.params.id, {
@@ -52,12 +52,12 @@ module.exports = {
         }
     },
 
-    // Crear un nuevo producto con su categoría y marca
+    
     crear: async (req, res, next) => {
         try {
             const { categoria_id, marca_id, codigo_sku, descripcion, tamano, duracion_anios, extension_m2, color } = req.body;
 
-            // Verificar si la categoría y marca existen
+            
             const categoria = await models.categoria.findByPk(categoria_id);
             const marca = await models.marca.findByPk(marca_id);
 
@@ -65,7 +65,7 @@ module.exports = {
                 return res.status(404).json({ error: 'Categoría o Marca no encontrados' });
             }
 
-            // Crear el nuevo producto
+            
             const nuevoProducto = await models.producto.create({
                 categoria_id,
                 marca_id,
@@ -89,7 +89,7 @@ module.exports = {
         }
     },
 
-    // Actualizar un producto existente
+    
     actualizar: async (req, res, next) => {
         try {
             const { categoria_id, marca_id, codigo_sku, descripcion, tamano, duracion_anios, extension_m2, color } = req.body;
@@ -123,7 +123,7 @@ module.exports = {
         }
     },
 
-    // Eliminar un producto por su ID
+    
     eliminar: async (req, res, next) => {
         try {
             const id = req.params.id;

@@ -2,11 +2,19 @@
 const { DataTypes } = require('sequelize');
 const db = require('../../db/db');
 
-const Precio = db.define('Precio', {
+const DetallePedido = db.define('DetallePedido', {
     id: {
         type: DataTypes.INTEGER,
         primaryKey: true,
         autoIncrement: true
+    },
+    pedido_id: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        references: {
+            model: 'pedidos',
+            key: 'id'
+        }
     },
     producto_presentacion_id: {
         type: DataTypes.INTEGER,
@@ -16,23 +24,21 @@ const Precio = db.define('Precio', {
             key: 'id'
         }
     },
-    sucursal_id: {
+    cantidad: {
         type: DataTypes.INTEGER,
-        allowNull: true,  
-        references: {
-            model: 'sucursales',
-            key: 'id'
+        allowNull: false,
+        validate: {
+            min: 1
         }
     },
-    precio_venta: {
+    precio_unitario: {
         type: DataTypes.DECIMAL(12, 2),
         allowNull: false,
         validate: {
-            min: 0,
-            isDecimal: true
+            min: 0
         }
     },
-    descuento_pct: {
+    descuento_pct_aplicado: {
         type: DataTypes.DECIMAL(5, 2),
         defaultValue: 0,
         validate: {
@@ -40,30 +46,16 @@ const Precio = db.define('Precio', {
             max: 100
         }
     },
-    stock_minimo: {
-        type: DataTypes.INTEGER,
-        allowNull: true,
-        defaultValue: 0,
+    subtotal: {
+        type: DataTypes.DECIMAL(12, 2),
+        allowNull: false,
         validate: {
             min: 0
         }
-    },
-    vigente_desde: {
-        type: DataTypes.DATE,
-        allowNull: false,
-        defaultValue: DataTypes.NOW
-    },
-    vigente_hasta: {
-        type: DataTypes.DATE,
-        allowNull: true
-    },
-    activo: {
-        type: DataTypes.BOOLEAN,
-        defaultValue: true
     }
 }, {
-    tableName: 'precios',
+    tableName: 'detallepedido',
     timestamps: false
 });
 
-module.exports = Precio;
+module.exports = DetallePedido;

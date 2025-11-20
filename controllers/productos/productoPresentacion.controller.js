@@ -1,7 +1,7 @@
-// controllers/productos/productoPresentacion.controller.js
+
 const { ProductoPresentacion, Producto, Presentacion, Categoria, Marca } = require('../../models/index');
 
-// Obtener catálogo vendible completo (todos los productos con sus presentaciones)
+
 exports.getCatalogoVendible = async (req, res, next) => {
     try {
         const { activo } = req.query;
@@ -45,13 +45,13 @@ exports.getCatalogoVendible = async (req, res, next) => {
     }
 };
 
-// Obtener presentaciones de un producto específico
+
 exports.getPresentacionesDeProducto = async (req, res, next) => {
     try {
         const { producto_id } = req.params;
         const { incluir_inactivos } = req.query;
 
-        // Verificar que el producto existe
+        
         const producto = await Producto.findByPk(producto_id, {
             include: [
                 { model: Categoria, as: 'categoria' },
@@ -66,7 +66,7 @@ exports.getPresentacionesDeProducto = async (req, res, next) => {
             });
         }
 
-        // Por defecto, solo mostrar presentaciones activas
+        
         const where = { producto_id };
         if (incluir_inactivos !== 'true') {
             where.activo = true;
@@ -94,7 +94,7 @@ exports.getPresentacionesDeProducto = async (req, res, next) => {
     }
 };
 
-// Obtener un ProductoPresentacion por ID
+
 exports.getProductoPresentacionById = async (req, res, next) => {
     try {
         const { id } = req.params;
@@ -133,13 +133,13 @@ exports.getProductoPresentacionById = async (req, res, next) => {
     }
 };
 
-// Agregar presentaciones a un producto (batch)
+
 exports.agregarPresentacionesAProducto = async (req, res, next) => {
     try {
         const { producto_id } = req.params;
-        const { presentaciones } = req.body; // Array de IDs: [1, 2, 3]
+        const { presentaciones } = req.body; 
 
-        // Validación
+        
         if (!presentaciones || !Array.isArray(presentaciones) || presentaciones.length === 0) {
             return res.status(400).json({
                 success: false,
@@ -147,7 +147,7 @@ exports.agregarPresentacionesAProducto = async (req, res, next) => {
             });
         }
 
-        // Verificar que el producto existe
+        
         const producto = await Producto.findByPk(producto_id);
         if (!producto) {
             return res.status(404).json({
@@ -156,7 +156,7 @@ exports.agregarPresentacionesAProducto = async (req, res, next) => {
             });
         }
 
-        // Verificar que todas las presentaciones existen
+        
         const presentacionesValidas = await Presentacion.findAll({
             where: {
                 id: presentaciones,
@@ -171,7 +171,7 @@ exports.agregarPresentacionesAProducto = async (req, res, next) => {
             });
         }
 
-        // Crear las combinaciones (ignorar duplicados)
+        
         const resultados = {
             creadas: [],
             duplicadas: []
@@ -212,12 +212,12 @@ exports.agregarPresentacionesAProducto = async (req, res, next) => {
     }
 };
 
-// Crear una combinación individual
+
 exports.createProductoPresentacion = async (req, res, next) => {
     try {
         const { producto_id, presentacion_id } = req.body;
 
-        // Validaciones
+        
         if (!producto_id || !presentacion_id) {
             return res.status(400).json({
                 success: false,
@@ -225,7 +225,7 @@ exports.createProductoPresentacion = async (req, res, next) => {
             });
         }
 
-        // Verificar que producto y presentación existen
+        
         const producto = await Producto.findByPk(producto_id);
         const presentacion = await Presentacion.findByPk(presentacion_id);
 
@@ -243,14 +243,14 @@ exports.createProductoPresentacion = async (req, res, next) => {
             });
         }
 
-        // Crear la combinación
+        
         const productoPresentacion = await ProductoPresentacion.create({
             producto_id,
             presentacion_id,
             activo: true
         });
 
-        // Obtener con relaciones
+        
         const resultado = await ProductoPresentacion.findByPk(productoPresentacion.id, {
             include: [
                 { model: Producto, as: 'producto' },
@@ -275,7 +275,7 @@ exports.createProductoPresentacion = async (req, res, next) => {
     }
 };
 
-// Desactivar combinación
+
 exports.desactivarProductoPresentacion = async (req, res, next) => {
     try {
         const { id } = req.params;
@@ -301,7 +301,7 @@ exports.desactivarProductoPresentacion = async (req, res, next) => {
     }
 };
 
-// Reactivar combinación
+
 exports.reactivarProductoPresentacion = async (req, res, next) => {
     try {
         const { id } = req.params;
@@ -327,7 +327,7 @@ exports.reactivarProductoPresentacion = async (req, res, next) => {
     }
 };
 
-// Eliminar combinación (soft delete)
+
 exports.deleteProductoPresentacion = async (req, res, next) => {
     try {
         const { id } = req.params;
@@ -341,8 +341,8 @@ exports.deleteProductoPresentacion = async (req, res, next) => {
             });
         }
 
-        // Soft delete: marcar como inactivo en lugar de eliminar
-        // Esto preserva el historial de ventas, compras, inventario y precios
+        
+        
         await productoPresentacion.update({ activo: false });
 
         res.status(200).json({

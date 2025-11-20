@@ -1,4 +1,4 @@
-// models/ventas/pago.model.js
+
 const { DataTypes } = require('sequelize');
 const db = require('../../db/db');
 
@@ -10,11 +10,20 @@ const Pago = db.define('Pago', {
     },
     factura_id: {
         type: DataTypes.INTEGER,
-        allowNull: false,
+        allowNull: true,
         references: {
             model: 'facturas',
             key: 'id'
         }
+    },
+    pedido_id: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        references: {
+            model: 'pedidos',
+            key: 'id'
+        },
+        comment: 'ID del pedido en línea si aplica'
     },
     tipo: {
         type: DataTypes.ENUM('EFECTIVO', 'TARJETA_DEBITO', 'TARJETA_CREDITO', 'CHEQUE', 'TRANSFERENCIA', 'DEPOSITO'),
