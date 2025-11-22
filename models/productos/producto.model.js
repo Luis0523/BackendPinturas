@@ -33,6 +33,10 @@ const Producto = db.define('Producto', {
         type: DataTypes.STRING(60),
         allowNull: true
     },
+    imagen_url: {
+        type: DataTypes.STRING(500),
+        allowNull: true
+    },
     activo: {
         type: DataTypes.BOOLEAN,
         defaultValue: true
