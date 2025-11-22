@@ -567,11 +567,99 @@ const trasladarInventario = async (req, res, next) => {
     }
 };
 
+/**
+ * Obtener inventario de todas las presentaciones de un producto
+ */
+const getInventarioProducto = async (req, res, next) => {
+    try {
+        const { producto_id } = req.params;
+
+        // Verificar que el producto existe
+        const producto = await Producto.findByPk(producto_id);
+        if (!producto) {
+            return res.status(404).json({
+                success: false,
+                message: 'Producto no encontrado'
+            });
+        }
+
+        // Obtener todas las presentaciones del producto
+        const presentaciones = await ProductoPresentacion.findAll({
+            where: { producto_id, activo: true },
+            include: [
+                {
+                    model: Presentacion,
+                    as: 'presentacion'
+                }
+            ]
+        });
+
+        // Obtener inventario de todas las presentaciones en todas las sucursales
+        const presentacionIds = presentaciones.map(p => p.id);
+
+        const inventarios = await InventarioSucursal.findAll({
+            where: {
+                producto_presentacion_id: presentacionIds
+            },
+            include: [
+                {
+                    model: ProductoPresentacion,
+                    as: 'productoPresentacion',
+                    include: [
+                        {
+                            model: Presentacion,
+                            as: 'presentacion'
+                        },
+                        {
+                            model: Precio,
+                            as: 'precios',
+                            where: { activo: true },
+                            required: false,
+                            order: [['vigente_desde', 'DESC']],
+                            limit: 1
+                        }
+                    ]
+                },
+                {
+                    model: Sucursal,
+                    as: 'sucursal',
+                    attributes: ['id', 'nombre', 'direccion']
+                }
+            ],
+            order: [
+                [{ model: Sucursal, as: 'sucursal' }, 'nombre', 'ASC'],
+                [{ model: ProductoPresentacion, as: 'productoPresentacion' }, { model: Presentacion, as: 'presentacion' }, 'nombre', 'ASC']
+            ]
+        });
+
+        res.status(200).json({
+            success: true,
+            producto: {
+                id: producto.id,
+                descripcion: producto.descripcion,
+                codigo_sku: producto.codigo_sku
+            },
+            count: inventarios.length,
+            data: inventarios.map(inv => ({
+                ...inv.toJSON(),
+                stock_minimo: inv.minimo,
+                stock_maximo: inv.maximo || null,
+                estado: inv.existencia === 0 ? 'AGOTADO' :
+                    inv.existencia < inv.minimo ? 'BAJO' : 'OK'
+            }))
+        });
+    } catch (error) {
+        console.error('Error en getInventarioProducto:', error);
+        next(error);
+    }
+};
+
 module.exports = {
     getInventarioSucursal,
     getStockProducto,
     getAlertasStock,
     getProductosAgotados,
+    getInventarioProducto,
     upsertInventario,
     ajustarInventario,
     trasladarInventario

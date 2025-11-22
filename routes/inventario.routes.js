@@ -13,6 +13,9 @@ router.get('/inventario/sucursal/:sucursal_id/alertas', inventarioController.get
 router.get('/inventario/producto-presentacion/:producto_presentacion_id', inventarioController.getStockProducto);
 
 
+router.get('/inventario/producto/:producto_id', inventarioController.getInventarioProducto);
+
+
 router.get('/inventario/alertas', inventarioController.getAlertasStock);
 
 
